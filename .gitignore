@@ -102,3 +102,14 @@ dist
 
 # TernJS port file
 .tern-port
+.ssh
+temp
+avoid*
+final
+*.pdf
+*setup.md
+*.jpg
+*.jpeg
+*.png
+*.map
+*.svg
