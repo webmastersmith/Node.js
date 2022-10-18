@@ -113,3 +113,4 @@ final
 *.png
 *.map
 *.svg
+package-lock.json
