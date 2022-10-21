@@ -114,3 +114,4 @@ final
 *.map
 *.svg
 package-lock.json
+*after-section-*
