@@ -2,7 +2,7 @@ import fs from 'fs';
 import { NextFunction, Request, Response } from 'express';
 import { Data } from '../@types/types';
 
-let tours = JSON.parse(
+const tours = JSON.parse(
   fs.readFileSync(process.cwd() + '/dev-data/data/tours-simple.json', 'utf-8')
 );
 
