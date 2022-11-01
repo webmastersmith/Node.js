@@ -23,7 +23,7 @@ module.exports = {
     quotes: ['error', 'single'],
     semi: ['error', 'always'],
     'spaced-comment': 'off',
-    'no-console': 'warn',
+    // 'no-console': 'warn',
     'consistent-return': 'off',
     'func-names': 'off',
     'object-shorthand': 'off',

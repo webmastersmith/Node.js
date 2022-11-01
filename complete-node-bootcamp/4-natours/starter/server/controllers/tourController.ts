@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { NextFunction, Request, Response } from 'express';
 import { Data } from '../@types/types';
+// import { Tour } from '../model/Mongoose_Schema';
 
 const tours = JSON.parse(
   fs.readFileSync(process.cwd() + '/dev-data/data/tours-simple.json', 'utf-8')
