@@ -5,16 +5,16 @@ import {
   getAllTours,
   getTour,
   updateTour,
-  checkId,
-  validateReqBody,
+  // checkId,
+  // validateReqBody,
 } from '../controllers/tourController';
 
 const router = express.Router();
 
-router.route('/').get(getAllTours).post(validateReqBody, createTour);
+router.route('/').get(getAllTours).post(createTour);
 
 // check if id valid before continue
-router.param('id', checkId);
+// router.param('id', checkId);
 router.route('/:id').get(getTour).patch(updateTour).delete(deleteTour);
 
 export default router;

@@ -1,129 +1,156 @@
-import fs from 'fs';
-import { NextFunction, Request, Response } from 'express';
-import { Data } from '../@types/types';
-// import { Tour } from '../model/Mongoose_Schema';
-
-const tours = JSON.parse(
-  fs.readFileSync(process.cwd() + '/dev-data/data/tours-simple.json', 'utf-8')
-);
+import { Request, Response } from 'express';
+import { Tour } from '../model/Mongoose_Schema';
 
 // Route Handlers
-export const validateReqBody = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  if (!req.body?.name || !req.body?.price) {
-    return res.status(400).json({
-      status: 'error',
-      data: 'New tours need name and price.',
-    });
-  }
-  next();
-};
-export const checkId = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-  value: string
-) => {
-  const id = +value;
-  console.log('checkID ' + id);
+// export const validateReqBody = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   if (!req.body?.name || !req.body?.price) {
+//     return res.status(400).json({
+//       status: 'error',
+//       data: 'New tours need name and price.',
+//     });
+//   }
+//   next();
+// };
+// export const checkId = (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+//   value: string
+// ) => {
+//   const id = +value;
+//   console.log('checkID ' + id);
 
-  if (tours.findIndex((el: Data) => el.id === id) < 0) {
-    return res.status(404).json({
-      status: 'error',
-      data: 'ID not found',
+//   if (tours.findIndex((el: Data) => el.id === id) < 0) {
+//     return res.status(404).json({
+//       status: 'error',
+//       data: 'ID not found',
+//     });
+//   }
+//   return next();
+// };
+export const getAllTours = async (req: Request, res: Response) => {
+  // curl -i -X GET http://localhost:8080/api/v1/tours
+  try {
+    const tours = await Tour.find(req.query).exec();
+    res.status(200).json({
+      status: 'success',
+      results: tours.length,
+      data: tours,
     });
-  }
-  return next();
-};
-export const getAllTours = (req: Request, res: Response) => {
-  console.log(req.requestTime);
-  res
-    .status(200)
-    .json({ status: 'success', results: tours.length, data: { tours } });
-};
-export const createTour = (req: Request, res: Response) => {
-  // curl -i -d '{ "username": "bob", "password":"secret", "website": "stack.com" }' -X POST http://localhost:8080/api/v1/tours -H 'content-type:application/json'
-  const newTourId = tours.length;
-  const newTour = { id: newTourId, ...req.body };
-  tours.push(newTour);
-  fs.writeFile(
-    process.cwd() + '/dev-data/data/tours-simple.json',
-    JSON.stringify(tours),
-    (err) => {
-      if (err) {
-        console.log(err);
-        res.status(400).send('Error');
-        return;
-      }
-      res.status(200).json({
-        status: 'success',
-        results: tours.length,
-        data: 'Tour successfully added.',
+  } catch (e) {
+    if (e instanceof Error) {
+      res.status(400).json({
+        status: 'error',
+        results: await Tour.count(),
+        data: e.message,
       });
+      console.log(e.message);
+    } else {
+      console.log(String(e));
     }
-  );
+  }
+};
+export const createTour = async (req: Request, res: Response) => {
+  // curl -i -d '{ "name": "The Jolly Rancher", "price":"497", "rating": "4.3" }' -X POST http://localhost:8080/api/v1/tours -H 'content-type:application/json'
+
+  try {
+    await Tour.create(req.body);
+
+    res.status(201).json({
+      status: 'success',
+      results: await Tour.count(),
+      data: `${req.body?.name ?? 'Tour'} successfully added.`,
+    });
+  } catch (e) {
+    if (e instanceof Error) {
+      console.log(e.message);
+      res.status(400).json({
+        status: 'error',
+        results: 0,
+        data: e.message,
+      });
+    } else {
+      console.log(String(e));
+    }
+  }
 };
 
 // need id
-export const getTour = (req: Request, res: Response) => {
+export const getTour = async (req: Request, res: Response) => {
+  // curl -i http://localhost:8080/api/v1/tours/636195d2f2b523404ef1faf8
   // console.log( req.params.id);
-  const data = tours.find((el: Data) => el.id === +req.params.id);
-  res.status(200).json({
-    status: 'success',
-    results: tours.length,
-    data,
-  });
-};
-export const updateTour = (req: Request, res: Response) => {
-  // curl -i -d '{ "username": "bobby" }' -X PATCH http://localhost:8080/api/v1/tours/9 -H 'content-type:application/json'
-  const id = +req.params.id;
-  const dataIndex = tours.findIndex((el: Data) => el.id === id);
-  const [data] = tours.splice(dataIndex, 1);
-  const newData = { ...data, ...req.body };
-  tours.splice(dataIndex, 0, newData);
-  fs.writeFile(
-    process.cwd() + '/dev-data/data/tours-simple.json',
-    JSON.stringify(tours),
-    (err) => {
-      if (err) {
-        console.log(err);
-        res.status(400).send('Error');
-        return;
-      }
-      res.status(200).json({
-        status: 'success',
-        results: tours.length,
-        data: 'Thank you!',
+  try {
+    const tour = await Tour.findById(req.params.id).exec();
+
+    res.status(200).json({
+      status: 'success',
+      results: 1,
+      data: tour,
+    });
+  } catch (e) {
+    if (e instanceof Error) {
+      res.status(404).json({
+        status: 'error',
+        results: 0,
+        data: e.message,
       });
+      console.log(e.message);
+    } else {
+      console.log(String(e));
     }
-  );
+  }
 };
-export const deleteTour = (req: Request, res: Response) => {
-  // curl -i -X DELETE http://localhost:8080/api/v1/tours/9
-  const id = +req.params.id;
-  const dataId = tours.findIndex((el: Data) => el.id === id);
-  tours.splice(dataId, 1);
-  fs.writeFile(
-    process.cwd() + '/dev-data/data/tours-simple.json',
-    JSON.stringify(tours),
-    (err) => {
-      if (err) {
-        console.log(err);
-        res.status(400).json({
-          status: 'error',
-          results: tours.length,
-          data: 'Could not delete tour.',
-        });
-        return;
-      }
-      res.status(204).json({
-        status: 'success',
-        results: tours.length,
-        data: `Tour ${id} was deleted.`,
+export const updateTour = async (req: Request, res: Response) => {
+  // curl -i -d '{ "name": "The Forest Hiker2" }' -X PATCH http://localhost:8080/api/v1/tours/636195d2f2b523404ef1faf8 -H 'content-type:application/json'
+  try {
+    const tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
+      returnDocument: 'after',
+      runValidators: true,
+    }).exec();
+
+    res.status(200).json({
+      status: 'success',
+      results: 1,
+      data: `${tour?.name ?? 'Tour'} successfully updated.`,
+    });
+  } catch (e) {
+    if (e instanceof Error) {
+      res.status(404).json({
+        status: 'error',
+        results: 0,
+        data: e.message,
       });
+      console.log(e.message);
+    } else {
+      console.log(String(e));
     }
-  );
+  }
+};
+export const deleteTour = async (req: Request, res: Response) => {
+  // curl -i -X DELETE http://localhost:8080/api/v1/tours/6362aaaea834e079676c0432
+  try {
+    const deletedTour = await Tour.findByIdAndDelete(req.params.id);
+    console.log(deletedTour);
+
+    res.status(200).json({
+      status: 'success',
+      results: 1,
+      data: `${deletedTour?.name || 'Tour'} was deleted.`,
+    });
+  } catch (e) {
+    if (e instanceof Error) {
+      res.status(404).json({
+        status: 'error',
+        results: 0,
+        data: e.message,
+      });
+      console.log(e.message);
+    } else {
+      console.log(String(e));
+    }
+  }
 };

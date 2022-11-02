@@ -3,9 +3,8 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 
 (async function () {
-  let DB;
   try {
-    DB = await mongoose.connect(`${process.env.MONGOOSE}`);
+    await mongoose.connect(`${process.env.MONGOOSE}`);
     console.log('Successfully Connected to Database.');
 
     app.listen(process.env.PORT, () => {
@@ -18,8 +17,7 @@ import mongoose from 'mongoose';
       console.log(String(e));
     }
   } finally {
-    await DB?.disconnect();
-
-    console.log('Closed Client');
+    // await DB?.disconnect();
+    // console.log('Closed Client');
   }
 })();

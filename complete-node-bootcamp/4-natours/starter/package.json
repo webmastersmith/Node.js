@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "dev": "nodemon ./server/server.ts"
+    "dev": "NODE_ENV=development nodemon ./server/server.ts"
   },
   "keywords": [],
   "author": "",
