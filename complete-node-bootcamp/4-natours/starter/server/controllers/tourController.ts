@@ -1,5 +1,6 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { Tour } from '../model/Mongoose_Schema';
+import ApiFeatures from '../utils/ApiFeatures';
 
 // Route Handlers
 // export const validateReqBody = async (
@@ -32,10 +33,30 @@ import { Tour } from '../model/Mongoose_Schema';
 //   }
 //   return next();
 // };
+
+// aliasTopTours manipulate the url to include logic for top 5 tours.
+export const aliasTopTours = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  // limit=5&sort=
+  req.query.limit = '5';
+  req.query.sort = '-ratingsAverage,price';
+  req.query.fields = 'name,price,ratingsAverage,summary,difficulty';
+  return next();
+};
+
 export const getAllTours = async (req: Request, res: Response) => {
   // curl -i -X GET http://localhost:8080/api/v1/tours
   try {
-    const tours = await Tour.find(req.query).exec();
+    const feature = new ApiFeatures(Tour, req.query)
+      .filter()
+      .sort()
+      .fields()
+      .pageLimit();
+    const tours = (await feature.query) as typeof Tour[];
+
     res.status(200).json({
       status: 'success',
       results: tours.length,
@@ -45,7 +66,7 @@ export const getAllTours = async (req: Request, res: Response) => {
     if (e instanceof Error) {
       res.status(400).json({
         status: 'error',
-        results: await Tour.count(),
+        results: 0,
         data: e.message,
       });
       console.log(e.message);
@@ -148,6 +169,50 @@ export const deleteTour = async (req: Request, res: Response) => {
         results: 0,
         data: e.message,
       });
+      console.log(e.message);
+    } else {
+      console.log(String(e));
+    }
+  }
+};
+
+export const getTourStats = async (req: Request, res: Response) => {
+  try {
+    const stats = await Tour.aggregate([
+      {
+        $match: { ratingsAverage: { $gte: 4.5 } },
+      },
+      {
+        $group: {
+          _id: { $toUpper: '$difficulty' }, // field to group by.
+          numTours: { $count: {} }, // counts the number in each group.
+          numRatings: { $sum: '$ratingQuantity' },
+          avgRating: { $avg: '$ratingsAverage' },
+          avgPrice: { $avg: '$price' },
+          minPrice: { $min: '$price' },
+          maxPrice: { $max: '$price' },
+        },
+      },
+      {
+        $sort: { minPrice: 1 },
+      },
+      {
+        $match: { _id: { $ne: 'EASY' } }, // search through again and filter.
+      },
+    ]);
+    res.status(200).json({
+      status: 'success',
+      results: stats.length,
+      data: stats,
+    });
+  } catch (e) {
+    if (e instanceof Error) {
+      res.status(404).json({
+        status: 'error',
+        results: 0,
+        data: e.message,
+      });
+
       console.log(e.message);
     } else {
       console.log(String(e));
