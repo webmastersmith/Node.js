@@ -3,6 +3,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import morgan from 'morgan';
 import tourRouter from './tours';
 import userRouter from './users';
+import ExpressError from '../utils/Error_Handling';
 
 const app = express();
 
@@ -26,5 +27,25 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use('/api/v1/tours', tourRouter);
 // Users
 app.use('/api/v1/users', userRouter);
+
+// all unhandled routes -if placed at top of list, would always match route.
+app.all('*', (req: Request, res: Response, next: NextFunction) => {
+  // if something passed into next(), express automatically knows it's an error.
+  next(new ExpressError(404, `Cannot find ${req.originalUrl}`));
+});
+
+// error handling middleware
+app.use(
+  (err: ExpressError, req: Request, res: Response, next: NextFunction) => {
+    err.statusCode = err.statusCode || 500;
+    err.status = err.status || 'error';
+    err.message = err.message || 'unknown error';
+
+    res.status(err.statusCode).json({
+      status: err.status,
+      message: err.message,
+    });
+  }
+);
 
 export default app;
