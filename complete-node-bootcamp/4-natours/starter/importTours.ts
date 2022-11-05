@@ -5,6 +5,15 @@ import { Tour } from './server/model/Mongoose_Schema';
 
 type TourId = typeof Tour & { id?: number };
 
+async function loadTours(tours: TourId[]) {
+  for (const tour of tours) {
+    delete tour.id;
+    await Tour.create(tour);
+    console.log(tour);
+  }
+  return;
+}
+
 (async function () {
   const DB = await mongoose.connect(`${process.env.MONGOOSE}`);
   try {
@@ -15,11 +24,11 @@ type TourId = typeof Tour & { id?: number };
         'utf-8'
       )
     );
-    for (const tour of data) {
-      delete tour.id;
-      await Tour.create(tour);
-      console.log(tour);
-    }
+    // delete everything.
+    await Tour.deleteMany({});
+
+    // loadTours
+    await loadTours(data);
   } catch (e) {
     if (e instanceof Error) {
       console.log(e.message);

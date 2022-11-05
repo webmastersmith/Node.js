@@ -196,9 +196,9 @@ export const getTourStats = async (req: Request, res: Response) => {
       {
         $sort: { minPrice: 1 },
       },
-      {
-        $match: { _id: { $ne: 'EASY' } }, // search through again and filter.
-      },
+      // {
+      //   $match: { _id: { $ne: 'EASY' } }, // search through again and filter.
+      // },
     ]);
     res.status(200).json({
       status: 'success',
@@ -213,6 +213,60 @@ export const getTourStats = async (req: Request, res: Response) => {
         data: e.message,
       });
 
+      console.log(e.message);
+    } else {
+      console.log(String(e));
+    }
+  }
+};
+
+export const monthlyTourPlan = async (req: Request, res: Response) => {
+  try {
+    // count the tours each month.
+    const year: number = +req.params?.year || 2022;
+    const stats = await Tour.aggregate([
+      {
+        $unwind: { path: '$startDates' },
+      },
+      {
+        $match: {
+          startDates: {
+            $gte: new Date(`${year}-01-01`),
+            $lte: new Date(`${year}-12-31`),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { $month: '$startDates' },
+          numTours: { $count: {} }, // counts the number in each group.
+          tours: { $push: '$name' },
+        },
+      },
+      {
+        $addFields: { month: '$_id' },
+      },
+      {
+        $project: {
+          _id: 0,
+        },
+      },
+      {
+        $sort: { numTours: -1, month: 1 },
+      },
+    ]);
+    res.status(200).json({
+      status: 'success',
+      results: stats.length,
+      data: stats,
+    });
+  } catch (e) {
+    if (e instanceof Error) {
+      res.status(404).json({
+        status: 'error',
+        results: 0,
+        data: e.message,
+      });
       console.log(e.message);
     } else {
       console.log(String(e));

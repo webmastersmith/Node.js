@@ -21,7 +21,7 @@ module.exports = {
     indent: ['error', 2],
     'linebreak-style': ['error', 'unix'],
     // quotes: ['error', 'single', { allowTemplateLiterals: true }],
-    semi: ['error', 'always'],
+    // semi: ['error', 'always'],
     'spaced-comment': 'off',
     // 'no-console': 'warn',
     'consistent-return': 'off',
