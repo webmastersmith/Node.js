@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import tourRouter from './tours';
 import userRouter from './users';
 import ExpressError from '../utils/Error_Handling';
+import MainErrorHandler from '../controllers/errorController';
 
 const app = express();
 
@@ -22,7 +23,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   return next();
 });
 
-// Routes
+// ROUTES
 // Tours
 app.use('/api/v1/tours', tourRouter);
 // Users
@@ -35,17 +36,6 @@ app.all('*', (req: Request, res: Response, next: NextFunction) => {
 });
 
 // error handling middleware
-app.use(
-  (err: ExpressError, req: Request, res: Response, next: NextFunction) => {
-    err.statusCode = err.statusCode || 500;
-    err.status = err.status || 'error';
-    err.message = err.message || 'unknown error';
-
-    res.status(err.statusCode).json({
-      status: err.status,
-      message: err.message,
-    });
-  }
-);
+app.use(MainErrorHandler);
 
 export default app;

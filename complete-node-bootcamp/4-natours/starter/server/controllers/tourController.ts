@@ -1,40 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { Tour } from '../model/Mongoose_Schema';
+import { Tour } from '../model/TourSchema';
 import ApiFeatures from '../utils/ApiFeatures';
+import catchAsync from '../utils/catchAsyncError';
+// import ExpressError from '../utils/Error_Handling';
+// import ExpressError from '../utils/Error_Handling';
 
-// Route Handlers
-// export const validateReqBody = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   if (!req.body?.name || !req.body?.price) {
-//     return res.status(400).json({
-//       status: 'error',
-//       data: 'New tours need name and price.',
-//     });
-//   }
-//   next();
-// };
-// export const checkId = (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction,
-//   value: string
-// ) => {
-//   const id = +value;
-//   console.log('checkID ' + id);
-
-//   if (tours.findIndex((el: Data) => el.id === id) < 0) {
-//     return res.status(404).json({
-//       status: 'error',
-//       data: 'ID not found',
-//     });
-//   }
-//   return next();
-// };
-
-// aliasTopTours manipulate the url to include logic for top 5 tours.
+// aliasTopTours manipulate the req.query url to include logic for top 5 tours.
 export const aliasTopTours = async (
   req: Request,
   res: Response,
@@ -47,9 +18,11 @@ export const aliasTopTours = async (
   return next();
 };
 
-export const getAllTours = async (req: Request, res: Response) => {
-  // curl -i -X GET http://localhost:8080/api/v1/tours
-  try {
+export const getAllTours = catchAsync(
+  400,
+  async (req: Request, res: Response, next: NextFunction) => {
+    // curl -i -X GET http://localhost:8080/api/v1/tours
+    // this does not need error if found nothing, because nothing should be returned.
     const feature = new ApiFeatures(Tour, req.query)
       .filter()
       .sort()
@@ -62,122 +35,94 @@ export const getAllTours = async (req: Request, res: Response) => {
       results: tours.length,
       data: tours,
     });
-  } catch (e) {
-    if (e instanceof Error) {
-      res.status(400).json({
-        status: 'error',
-        results: 0,
-        data: e.message,
-      });
-      console.log(e.message);
-    } else {
-      console.log(String(e));
-    }
   }
-};
-export const createTour = async (req: Request, res: Response) => {
-  // curl -i -d '{ "name": "The Jolly Rancher", "price":"497", "rating": "4.3" }' -X POST http://localhost:8080/api/v1/tours -H 'content-type:application/json'
+);
 
-  try {
+export const createTour = catchAsync(
+  400,
+  async (req: Request, res: Response, next: NextFunction) => {
+    // curl -i -d '{ "name": "The Jolly Rancher", "price":"497", "rating": "4.3" }' -X POST http://localhost:8080/api/v1/tours -H 'content-type:application/json'
+
+    // returns only if tour successfully created.
     await Tour.create(req.body);
+
+    // if (!tour) {
+    //   throw new Error(`Tour ${req.params.id} not found :-(`);
+    // }
 
     res.status(201).json({
       status: 'success',
       results: await Tour.count(),
       data: `${req.body?.name ?? 'Tour'} successfully added.`,
     });
-  } catch (e) {
-    if (e instanceof Error) {
-      console.log(e.message);
-      res.status(400).json({
-        status: 'error',
-        results: 0,
-        data: e.message,
-      });
-    } else {
-      console.log(String(e));
-    }
   }
-};
+);
 
 // need id
-export const getTour = async (req: Request, res: Response) => {
-  // curl -i http://localhost:8080/api/v1/tours/636195d2f2b523404ef1faf8
-  // console.log( req.params.id);
-  try {
+export const getTourById = catchAsync(
+  404,
+  async (req: Request, res: Response, next: NextFunction) => {
+    // curl -i http://localhost:8080/api/v1/tours/636195d2f2b523404ef1faf8
+    // console.log( req.params.id);
+    // returns tour or null
     const tour = await Tour.findById(req.params.id).exec();
+    if (!tour) {
+      throw new Error(`Tour ${req.params.id} not found :-(`);
+    }
 
     res.status(200).json({
       status: 'success',
       results: 1,
       data: tour,
     });
-  } catch (e) {
-    if (e instanceof Error) {
-      res.status(404).json({
-        status: 'error',
-        results: 0,
-        data: e.message,
-      });
-      console.log(e.message);
-    } else {
-      console.log(String(e));
-    }
   }
-};
-export const updateTour = async (req: Request, res: Response) => {
-  // curl -i -d '{ "name": "The Forest Hiker2" }' -X PATCH http://localhost:8080/api/v1/tours/636195d2f2b523404ef1faf8 -H 'content-type:application/json'
-  try {
+);
+
+// patch
+export const updateTour = catchAsync(
+  404,
+  async (req: Request, res: Response, next: NextFunction) => {
+    // curl -i -d '{ "name": "The Forest Hiker2" }' -X PATCH http://localhost:8080/api/v1/tours/636195d2f2b523404ef1faf8 -H 'content-type:application/json'
+    // returns tour or null
     const tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
       returnDocument: 'after',
       runValidators: true,
     }).exec();
+
+    if (!tour) {
+      throw new Error(`Tour ${req.params.id} could not be found.`);
+    }
 
     res.status(200).json({
       status: 'success',
       results: 1,
       data: `${tour?.name ?? 'Tour'} successfully updated.`,
     });
-  } catch (e) {
-    if (e instanceof Error) {
-      res.status(404).json({
-        status: 'error',
-        results: 0,
-        data: e.message,
-      });
-      console.log(e.message);
-    } else {
-      console.log(String(e));
-    }
   }
-};
-export const deleteTour = async (req: Request, res: Response) => {
-  // curl -i -X DELETE http://localhost:8080/api/v1/tours/6362aaaea834e079676c0432
-  try {
-    const deletedTour = await Tour.findByIdAndDelete(req.params.id);
-    console.log(deletedTour);
+);
+
+export const deleteTour = catchAsync(
+  404,
+  async (req: Request, res: Response, next: NextFunction) => {
+    // curl -i -X DELETE http://localhost:8080/api/v1/tours/6362aaaea834e079676c0432
+    // returns tour or null
+    const tour = await Tour.findByIdAndDelete(req.params.id);
+    if (!tour) {
+      throw new Error(`Tour ${req.params.id} could not be found.`);
+    }
+    console.log(tour);
 
     res.status(200).json({
       status: 'success',
       results: 1,
-      data: `${deletedTour?.name || 'Tour'} was deleted.`,
+      data: `${tour?.name || 'Tour'} was deleted.`,
     });
-  } catch (e) {
-    if (e instanceof Error) {
-      res.status(404).json({
-        status: 'error',
-        results: 0,
-        data: e.message,
-      });
-      console.log(e.message);
-    } else {
-      console.log(String(e));
-    }
   }
-};
+);
 
-export const getTourStats = async (req: Request, res: Response) => {
-  try {
+export const getTourStats = catchAsync(
+  404,
+  async (req: Request, res: Response, next: NextFunction) => {
     const stats = await Tour.aggregate([
       {
         $match: { ratingsAverage: { $gte: 4.5 } },
@@ -205,23 +150,12 @@ export const getTourStats = async (req: Request, res: Response) => {
       results: stats.length,
       data: stats,
     });
-  } catch (e) {
-    if (e instanceof Error) {
-      res.status(404).json({
-        status: 'error',
-        results: 0,
-        data: e.message,
-      });
-
-      console.log(e.message);
-    } else {
-      console.log(String(e));
-    }
   }
-};
+);
 
-export const monthlyTourPlan = async (req: Request, res: Response) => {
-  try {
+export const monthlyTourPlan = catchAsync(
+  404,
+  async (req: Request, res: Response, next: NextFunction) => {
     // count the tours each month.
     const year: number = +req.params?.year || 2022;
     const stats = await Tour.aggregate([
@@ -260,16 +194,5 @@ export const monthlyTourPlan = async (req: Request, res: Response) => {
       results: stats.length,
       data: stats,
     });
-  } catch (e) {
-    if (e instanceof Error) {
-      res.status(404).json({
-        status: 'error',
-        results: 0,
-        data: e.message,
-      });
-      console.log(e.message);
-    } else {
-      console.log(String(e));
-    }
   }
-};
+);

@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import fs from 'fs';
-import { Tour } from './server/model/Mongoose_Schema';
+import { Tour } from './server/model/TourSchema';
 
 type TourId = typeof Tour & { id?: number };
 

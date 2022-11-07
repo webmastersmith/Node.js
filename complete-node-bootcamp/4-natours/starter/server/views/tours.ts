@@ -3,7 +3,7 @@ import {
   createTour,
   deleteTour,
   getAllTours,
-  getTour,
+  getTourById,
   updateTour,
   aliasTopTours,
   getTourStats,
@@ -22,6 +22,6 @@ router.route('/plan/:year').get(monthlyTourPlan);
 router.route('/').get(getAllTours).post(createTour);
 
 // router.param('id', checkId);
-router.route('/:id').get(getTour).patch(updateTour).delete(deleteTour);
+router.route('/:id').get(getTourById).patch(updateTour).delete(deleteTour);
 
 export default router;

@@ -20,4 +20,9 @@ import mongoose from 'mongoose';
     // await DB?.disconnect();
     // console.log('Closed Client');
   }
+
+  // not needed with try catch.
+  // process.on('unhandledRejection', (err: Error) => {
+  //   console.log('hellolllloooo', err);
+  // });
 })();
