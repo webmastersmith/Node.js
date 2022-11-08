@@ -20,6 +20,7 @@ module.exports = {
   rules: {
     // indent: ['warning', 2],
     'linebreak-style': ['error', 'unix'],
+    '@typescript-eslint/no-var-requires': 0,
     // quotes: ['error', 'single', { allowTemplateLiterals: true }],
     // semi: ['error', 'always'],
     'spaced-comment': 'off',
@@ -33,6 +34,6 @@ module.exports = {
     'no-underscore-dangle': 'off',
     'class-methods-use-this': 'off',
     'prefer-destructuring': ['error', { object: true, array: false }],
-    'no-unused-vars': ['error', { argsIgnorePattern: 'req|res|next|val' }],
+    // 'no-unused-vars': ['error', { argsIgnorePattern: 'req|res|next|val' }],
   },
 };

@@ -1,5 +1,18 @@
 import { Schema, model } from 'mongoose';
 import validator from 'validator';
+// import { NextFunction } from 'express';
+import crypto from 'crypto';
+
+interface UserType {
+  name: string;
+  email: string;
+  photo?: string;
+  password: string;
+  // passwordConfirm: string;
+  salt: string;
+  setPassword: (pw: string) => void;
+  isValidPassword: boolean;
+}
 
 const userSchema = new Schema({
   name: {
@@ -24,6 +37,7 @@ const userSchema = new Schema({
     type: String,
     required: [true, 'Email is required.'],
     unique: true,
+    lowercase: true,
     maxLength: [40, 'Email cannot be over 40 characters.'],
     minLength: [3, 'Valid email cannot be less than 3 characters.'],
     validate: {
@@ -53,23 +67,66 @@ const userSchema = new Schema({
     minLength: [8, 'Password cannot be less than 10 characters.'],
     validate: {
       validator: validator.isStrongPassword,
-      message: (props: { value: string }) =>
-        `Password requirements: minLength: 8, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1.`,
+      message: `Password requirements: minLength: 8, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1.`,
     },
   },
-  passwordConfirm: {
-    type: String,
-    required: [true, 'Password is required.'],
-    // unique: true,
-    trim: true,
-    maxLength: [40, 'Password cannot be over 40 characters.'],
-    minLength: [8, 'Password cannot be less than 10 characters.'],
-    validate: {
-      validator: validator.isStrongPassword,
-      message: (props: { value: string }) =>
-        `Password requirements: minLength: 8, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1.`,
-    },
-  },
+  // this should be on the client.
+  // passwordConfirm: {
+  //   type: String,
+  //   required: [true, 'Password is required.'],
+  //   // unique: true,
+  //   trim: true,
+  //   maxLength: [40, 'Password cannot be over 40 characters.'],
+  //   minLength: [8, 'Password cannot be less than 10 characters.'],
+  //   validate: {
+  //     validator: function (this: UserType, val: string) {
+  //       return val === this.password;
+  //     },
+  //     message: `Passwords must match.`,
+  //   },
+  // },
+  salt: String,
+});
+
+// https://mongoosejs.com/docs/api/schema.html#schema_Schema-pre
+
+async function setPassword(
+  password: string
+): Promise<{ salt: string; hash: string }> {
+  // Creating a unique salt for a particular user
+  const salt = crypto.randomBytes(16).toString('hex');
+  // Hashing user's salt and password with 1000 iterations,
+  const hash = crypto
+    .pbkdf2Sync(password, salt, 1000, 64, `sha512`)
+    .toString(`hex`);
+  return { salt, hash };
+}
+userSchema.methods.setPassword = async function (
+  password: string
+): Promise<void> {
+  const { salt, hash } = await setPassword(password);
+  this.salt = salt;
+  this.hash = hash;
+};
+// Method to check the entered password is correct or not
+userSchema.methods.isValidPassword = async function (
+  password: string
+): Promise<boolean> {
+  const hash = crypto
+    .pbkdf2Sync(password, this.salt, 1000, 64, `sha512`)
+    .toString(`hex`);
+  return this.hash === hash;
+};
+
+// check for password change
+userSchema.pre('save', async function (next) {
+  // if password not modified, just return.
+  if (!this.isModified('password')) return next();
+  // password has been modified.
+  const { salt, hash } = await setPassword(this.password);
+  this.salt = salt;
+  this.password = hash;
+  return next();
 });
 
 export const User = model('User', userSchema);

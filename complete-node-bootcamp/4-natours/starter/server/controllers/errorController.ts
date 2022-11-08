@@ -1,34 +1,36 @@
 import { NextFunction, Request, Response } from 'express';
 import ExpressError from '../utils/Error_Handling';
-// import { MongooseError } from 'mongoose';
-// import { MongoError } from 'mongodb';
+// import { Err} from 'mongodb';
+import { MongooseError } from 'mongoose';
 
 const expressError = (err: ExpressError, res: Response) => {
-  res.status(err.statusCode).json({
+  // check if validation error
+  if (err.originalError?.name === 'ValidationError') {
+    console.log('ValidationError');
+
+    const message = Object.values(
+      err.originalError?.errors as typeof MongooseError
+    )
+      .map((obj) => obj?.message)
+      .join(' ');
+
+    return res.status(err.statusCode).json({
+      status: err.status,
+      message: message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : '',
+      error: process.env.NODE_ENV === 'development' ? err : '',
+    });
+  }
+  // normal error
+  console.log('normal error');
+
+  return res.status(err.statusCode).json({
     status: err.status,
     message: err.message.replace(/^.*: /g, ''),
     stack: process.env.NODE_ENV === 'development' ? err.stack : '',
     error: process.env.NODE_ENV === 'development' ? err : '',
   });
 };
-
-// const mongooseError = (err: MongooseError, res: Response) => {
-//   // check for cast error
-//   res.status(400).json({
-//     status: 'mongoose error',
-//     message: err.message,
-//     stack: process.env.NODE_ENV === 'development' ? err.stack : '',
-//     error: process.env.NODE_ENV === 'development' ? err : '',
-//   });
-// };
-// const mongoError = (err: MongoError, res: Response) => {
-//   res.status(400).json({
-//     status: 'mongo error',
-//     message: err.message,
-//     stack: process.env.NODE_ENV === 'development' ? err.stack : '',
-//     error: process.env.NODE_ENV === 'development' ? err : '',
-//   });
-// };
 
 export default (
   err: ExpressError | Error,
@@ -47,16 +49,7 @@ export default (
   if (err instanceof ExpressError) {
     console.log('ExpressError');
     expressError(err, res);
-  }
-  // if (err instanceof MongooseError) {
-  //   console.log('MongooseError');
-  //   mongooseError(err, res);
-  // }
-  // if (err instanceof MongoError) {
-  //   console.log('MongoError');
-  //   mongoError(err, res);
-  // }
-  else {
+  } else {
     // catch anything not from express.
     console.log('GenericError');
 

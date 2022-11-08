@@ -34,7 +34,6 @@ export default class ApiFeatures {
     // instantiate query (Model).
     this.query = this.model.find(JSON.parse(reqObjString));
     // console.log('filter method');
-
     return this;
   }
 

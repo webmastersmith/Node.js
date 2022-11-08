@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import morgan from 'morgan';
-import tourRouter from './tours';
-import userRouter from './users';
+import tourRouter from './tourRoutes';
+import userRouter from './userRoutes';
 import ExpressError from '../utils/Error_Handling';
 import MainErrorHandler from '../controllers/errorController';
 

@@ -1,20 +1,15 @@
-import { MongooseError } from 'mongoose';
-import { MongoError } from 'mongodb';
 interface ErrorType extends Error {
   status: string;
   statusCode: number;
   message: string;
+  originalError?: any;
 }
 export default class ExpressError extends Error implements ErrorType {
   status: string;
   statusCode: number;
   isOperational: boolean;
-  originalError?: MongooseError | MongoError | Error;
-  constructor(
-    statusCode: number,
-    msg: string,
-    error?: MongooseError | MongoError | Error
-  ) {
+  originalError?: any;
+  constructor(statusCode: number, msg: string, error?: any) {
     super(msg);
     this.statusCode = statusCode;
     this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
