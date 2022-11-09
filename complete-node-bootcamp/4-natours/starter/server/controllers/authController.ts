@@ -100,7 +100,6 @@ export const protect = catchAsync(
 export const approvedRoles = (...roles: string[]) =>
   catchAsync(403, async (req: Request, res: Response, next: NextFunction) => {
     // user is already attached to req object.
-
     if (req?.user?.role) {
       if (roles.includes(req.user.role)) return next();
     }
