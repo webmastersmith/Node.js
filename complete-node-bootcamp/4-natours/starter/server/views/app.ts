@@ -20,6 +20,7 @@ if (process.env.NODE_ENV === 'development') {
 // custom middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   req.requestTime = new Date().toISOString();
+  console.log(req.headers);
   return next();
 });
 

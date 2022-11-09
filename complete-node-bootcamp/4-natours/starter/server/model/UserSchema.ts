@@ -3,18 +3,24 @@ import validator from 'validator';
 // import { NextFunction } from 'express';
 import crypto from 'crypto';
 
-interface UserType {
+export interface UserType {
+  _id: string;
   name: string;
   email: string;
   photo?: string;
+  role: 'user' | 'guide' | 'lead-guide' | 'admin';
   password: string;
+  passwordChangedAt: Date;
   // passwordConfirm: string;
   salt: string;
-  setPassword: (pw: string) => void;
-  isValidPassword: boolean;
+  // setPassword: (pw: string) => Promise<void>;
+  isValidPassword: (password: string) => Promise<boolean>;
+  hasPasswordChangedAfterToken: (jwtTimestamp: number) => Promise<boolean>;
+  iat?: number;
+  exp?: number;
 }
 
-const userSchema = new Schema({
+const userSchema = new Schema<UserType>({
   name: {
     type: String,
     required: [true, 'Name is required.'],
@@ -58,11 +64,17 @@ const userSchema = new Schema({
     //     `${props.value} is not a valid email.`,
     // },
   },
+  role: {
+    type: String,
+    enum: ['user', 'guide', 'lead-guide', 'admin'],
+    default: 'user',
+  },
   password: {
     type: String,
     required: [true, 'Password is required.'],
     // unique: true,
     trim: true,
+    select: false,
     maxLength: [40, 'Password cannot be over 40 characters.'],
     minLength: [8, 'Password cannot be less than 10 characters.'],
     validate: {
@@ -70,6 +82,7 @@ const userSchema = new Schema({
       message: `Password requirements: minLength: 8, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1.`,
     },
   },
+  passwordChangedAt: Date,
   // this should be on the client.
   // passwordConfirm: {
   //   type: String,
@@ -90,6 +103,13 @@ const userSchema = new Schema({
 
 // https://mongoosejs.com/docs/api/schema.html#schema_Schema-pre
 
+// userSchema.methods.setPassword = async function (
+//   password: string
+// ): Promise<void> {
+//   const { salt, hash } = await setPassword(password);
+//   this.salt = salt;
+//   this.hash = hash;
+// };
 async function setPassword(
   password: string
 ): Promise<{ salt: string; hash: string }> {
@@ -101,12 +121,18 @@ async function setPassword(
     .toString(`hex`);
   return { salt, hash };
 }
-userSchema.methods.setPassword = async function (
-  password: string
-): Promise<void> {
-  const { salt, hash } = await setPassword(password);
-  this.salt = salt;
-  this.hash = hash;
+// check if password was changed after jwt-token was created.
+userSchema.methods.hasPasswordChangedAfterToken = async function (
+  jwtTimestamp: number
+): Promise<boolean> {
+  // true is good false bad.
+  if (!this.passwordChangedAt) return false;
+  // jwtTimestamp is in seconds, passwordChanged is in milliseconds.
+  const changedTime = Math.floor(
+    (this.passwordChangedAt as Date).getTime() / 1000
+  );
+  console.log(jwtTimestamp, changedTime, jwtTimestamp - changedTime + 's');
+  return jwtTimestamp >= changedTime;
 };
 // Method to check the entered password is correct or not
 userSchema.methods.isValidPassword = async function (
@@ -115,7 +141,8 @@ userSchema.methods.isValidPassword = async function (
   const hash = crypto
     .pbkdf2Sync(password, this.salt, 1000, 64, `sha512`)
     .toString(`hex`);
-  return this.hash === hash;
+
+  return this.password === hash;
 };
 
 // check for password change

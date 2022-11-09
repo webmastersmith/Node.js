@@ -105,8 +105,12 @@ export const deleteTour = catchAsync(
   404,
   async (req: Request, res: Response, next: NextFunction) => {
     // curl -i -X DELETE http://localhost:8080/api/v1/tours/6362aaaea834e079676c0432
+    console.log('delete tour', req.user, req.params.id);
+
     // returns tour or null
     const tour = await Tour.findByIdAndDelete(req.params.id);
+    console.log('delete tour', tour);
+
     if (!tour) {
       throw new Error(`Tour ${req.params.id} could not be found.`);
     }

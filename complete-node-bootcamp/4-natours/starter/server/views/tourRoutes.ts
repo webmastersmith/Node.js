@@ -11,6 +11,7 @@ import {
   // checkId,
   // validateReqBody,
 } from '../controllers/tourController';
+import { protect, approvedRoles } from '../controllers/authController';
 
 const router = express.Router();
 
@@ -19,9 +20,13 @@ router.route('/top-5-tours').get(aliasTopTours, getAllTours);
 router.route('/stats').get(getTourStats);
 router.route('/plan/:year').get(monthlyTourPlan);
 
-router.route('/').get(getAllTours).post(createTour);
+router.route('/').get(protect, getAllTours).post(createTour);
 
 // router.param('id', checkId);
-router.route('/:id').get(getTourById).patch(updateTour).delete(deleteTour);
+router
+  .route('/:id')
+  .get(getTourById)
+  .patch(updateTour)
+  .delete(protect, approvedRoles('admin', 'lead-guide'), deleteTour);
 
 export default router;
