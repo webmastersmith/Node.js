@@ -5,7 +5,15 @@ import {
   updateUser,
   deleteUser,
 } from '../controllers/userController';
-import { signup, login } from '../controllers/authController';
+import {
+  signup,
+  login,
+  forgotPassword,
+  resetPassword,
+  updatePassword,
+  protect,
+  approvedRoles,
+} from '../controllers/authController';
 
 // Users
 const router = express.Router();
@@ -14,8 +22,26 @@ const router = express.Router();
 router.route('/signup').post(signup);
 // login
 router.route('/login').post(login);
+// forgotPassword
+router.route('/forgotPassword').post(forgotPassword);
+// resetPassword
+router.route('/resetPassword/:token').patch(resetPassword);
+// updatePassword logged in user.
+router.route('/updatePassword').patch(protect, updatePassword);
+// update user info
+router
+  .route('/updateMe')
+  .patch(protect, updateUser)
+  .delete(protect, deleteUser);
 
-router.route('/').get(getAllUsers);
-router.route('/:id').get(getUser).patch(updateUser).delete(deleteUser);
+// get all Users -admin only
+router.route('/').get(protect, approvedRoles('admin'), getAllUsers);
+
+// updateUser Info
+router
+  .route('/:id')
+  .get(protect, approvedRoles('admin'), getUser)
+  .patch(protect, approvedRoles('admin'), updateUser)
+  .delete(protect, approvedRoles('admin'), deleteUser);
 
 export default router;

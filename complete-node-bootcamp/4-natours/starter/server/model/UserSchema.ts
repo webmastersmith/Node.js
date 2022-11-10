@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model, QueryOptions } from 'mongoose';
 import validator from 'validator';
 // import { NextFunction } from 'express';
 import crypto from 'crypto';
@@ -13,11 +13,15 @@ export interface UserType {
   passwordChangedAt: Date;
   // passwordConfirm: string;
   salt: string;
+  iat?: number;
+  exp?: number;
+  passwordResetToken: string | undefined;
+  passwordResetTokenExpires: Date;
+  active: boolean;
   // setPassword: (pw: string) => Promise<void>;
   isValidPassword: (password: string) => Promise<boolean>;
   hasPasswordChangedAfterToken: (jwtTimestamp: number) => Promise<boolean>;
-  iat?: number;
-  exp?: number;
+  createPasswordResetToken: () => Promise<string>;
 }
 
 const userSchema = new Schema<UserType>({
@@ -99,6 +103,13 @@ const userSchema = new Schema<UserType>({
   //   },
   // },
   salt: String,
+  passwordResetToken: String,
+  passwordResetTokenExpires: Date,
+  active: {
+    type: Boolean,
+    default: true,
+    select: false, // don't show this field to client.
+  },
 });
 
 // https://mongoosejs.com/docs/api/schema.html#schema_Schema-pre
@@ -110,16 +121,17 @@ const userSchema = new Schema<UserType>({
 //   this.salt = salt;
 //   this.hash = hash;
 // };
-async function setPassword(
-  password: string
-): Promise<{ salt: string; hash: string }> {
+export async function hashPassword(
+  password: string,
+  salt: string
+): Promise<string> {
   // Creating a unique salt for a particular user
-  const salt = crypto.randomBytes(16).toString('hex');
+
   // Hashing user's salt and password with 1000 iterations,
   const hash = crypto
     .pbkdf2Sync(password, salt, 1000, 64, `sha512`)
     .toString(`hex`);
-  return { salt, hash };
+  return hash;
 }
 // check if password was changed after jwt-token was created.
 userSchema.methods.hasPasswordChangedAfterToken = async function (
@@ -144,15 +156,43 @@ userSchema.methods.isValidPassword = async function (
 
   return this.password === hash;
 };
+// Method to check the entered password is correct or not
+userSchema.methods.createPasswordResetToken =
+  async function (): Promise<string> {
+    // 1. Create Reset Token -send passwordResetToken to client.
+    const freshSalt = crypto.randomBytes(12).toString('hex'); // 24 chars
+    let resetToken = crypto.randomBytes(32).toString('hex'); // 64 chars
+    // 2. encrypt token - don't save any info unencrypted.
+    const hash = await hashPassword(resetToken, freshSalt);
+    // console.log({ resetToken, hash, freshSalt });
+
+    // 2. Assign to Database along with Token Reset Date.
+    this.passwordResetToken = hash;
+    // create date 10 minutes in the future.
+    const d = new Date();
+    this.passwordResetTokenExpires = new Date(
+      d.setMinutes(d.getMinutes() + 10)
+    );
+
+    return (resetToken += freshSalt);
+  };
 
 // check for password change
 userSchema.pre('save', async function (next) {
   // if password not modified, just return.
   if (!this.isModified('password')) return next();
+  const salt = crypto.randomBytes(16).toString('hex');
   // password has been modified.
-  const { salt, hash } = await setPassword(this.password);
+  const hash = await hashPassword(this.password, salt);
   this.salt = salt;
   this.password = hash;
+  return next();
+});
+// block showing any docs with active set to false.
+userSchema.pre(/^find/, async function (this: QueryOptions, next) {
+  console.log('userSchema find active', this.getFilter());
+
+  this.find({ active: { $ne: false } });
   return next();
 });
 

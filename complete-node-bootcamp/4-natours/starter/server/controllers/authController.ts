@@ -1,9 +1,11 @@
-import { User } from '../model/UserSchema';
+import { User, hashPassword, UserType } from '../model/UserSchema';
 import { Request, Response, NextFunction } from 'express';
 import catchAsync from '../utils/catchAsyncError';
 import 'dotenv/config';
 import { createEncryptedToken, isValidToken } from '../utils/JWT';
+import sendEmail from '../utils/email';
 import ExpressError from '../utils/Error_Handling';
+import { Document } from 'mongoose';
 
 // import ApiFeatures from '../utils/ApiFeatures';
 
@@ -105,3 +107,149 @@ export const approvedRoles = (...roles: string[]) =>
     }
     return next(new ExpressError(403, 'Not Authorized.'));
   });
+
+export const forgotPassword = catchAsync(
+  400,
+  async (req: Request, res: Response, next: NextFunction) => {
+    // 1. Get User based on posted Email.
+    const { email } = req.body;
+    if (!email)
+      return next(new ExpressError(404, 'Please provide a valid email.'));
+    // returns user or null
+    const user = await User.findOne({ email });
+    if (!user) return next(new ExpressError(404, 'Email not found.'));
+
+    // 2. Generate the random reset token
+    const resetToken = await user.createPasswordResetToken();
+
+    // document is modified, but not saved to database.
+    // returns user or null
+    await user.save({ validateModifiedOnly: true });
+    // console.log({ userSaveReturn });
+
+    // 3. Send token as email to user.
+    const resetUrl = `${req.protocol}://${req.get(
+      'host'
+    )}/api/v1/users/resetPassword/${resetToken}`;
+    const message = `Forget your password? Click this link to reset it.\n${resetUrl}`;
+    // send email
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Your password reset token is valid for 10 minutes.',
+        message,
+      });
+
+      // 4. return success response.
+      res.status(201).json({
+        status: 'success',
+        resetToken,
+        results: 'reset token has been sent to your email.',
+        data: { resetUrl },
+      });
+    } catch (e) {
+      // email failed, void the token and expiration time.
+      user.passwordResetToken = undefined;
+      const d = new Date();
+      // reset password date 10 days back, to void it.
+      user.passwordResetTokenExpires = new Date(d.setDate(d.getDate() - 10));
+      await user.save({ validateModifiedOnly: true });
+      res.status(500).json({
+        status: 'fail',
+        results: 'Error sending email. Try again later.',
+        data: { resetUrl },
+      });
+    }
+  }
+);
+
+export const resetPassword = catchAsync(
+  400,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const resetTokenPlusSalt = req.params?.token;
+    if (!resetTokenPlusSalt)
+      return next(
+        new ExpressError(
+          400,
+          'Something wrong with password reset token, please start over.'
+        )
+      );
+    // 1. get user from reset token
+    // resetToken = token + salt.
+    const resetToken = resetTokenPlusSalt.slice(0, -24);
+    const salt = resetTokenPlusSalt.slice(-24);
+    const encryptedToken = await hashPassword(resetToken, salt);
+
+    // 2. get user from token and check if token expired.
+    const user = await User.findOne({
+      passwordResetToken: encryptedToken,
+      passwordResetTokenExpires: { $gte: Date.now() },
+    });
+
+    if (!user)
+      return next(
+        new ExpressError(404, 'Password Reset Token expired or User not found.')
+      );
+
+    console.log('resetPassword', {
+      user,
+      resetTokenPlusSalt,
+      salt,
+      resetToken,
+      encryptedToken,
+    });
+
+    // reset password, passwordChangedAt
+    user.password = req.body?.password;
+    user.passwordChangedAt = new Date();
+    // Void passwordResetToken, passwordResetTokenExpires
+    user.passwordResetToken = undefined;
+    user.passwordResetTokenExpires = new Date(
+      user.passwordResetTokenExpires.setDate(
+        user.passwordResetTokenExpires.getDate() - 10
+      )
+    );
+    await user.save({ validateModifiedOnly: true });
+    // give them a valid token.
+    const token = await createEncryptedToken(user, '2h');
+
+    res.status(200).json({
+      status: 'success',
+      token,
+      results: 'Password has been reset.',
+      data: { user },
+    });
+  }
+);
+export const updatePassword = catchAsync(
+  400,
+  async (req: Request, res: Response, next: NextFunction) => {
+    // 1. get password
+    const { password, newPassword } = req.body;
+    console.log('updatePassword', { password, newPassword });
+    if (!password || !newPassword)
+      return next(
+        new ExpressError(401, 'Please provide valid password or new password.')
+      );
+
+    // 2. get user from req, added from 'protect' function.
+    // prettier-ignore
+    const user = req.user as Document<unknown, any, UserType> & UserType & Required<{ _id: string; }>;
+    // 3. verify password correct.
+    if (!user || !(await user.isValidPassword(password)))
+      return next(
+        new ExpressError(401, 'To update password, please login again.')
+      );
+
+    // 4. valid user, now change password.
+    user.password = newPassword;
+    user.passwordChangedAt = new Date();
+    await user.save({ validateModifiedOnly: true });
+
+    res.status(200).json({
+      status: 'success',
+      results: 'Password has been changed.',
+      data: { user },
+    });
+  }
+);
