@@ -37,7 +37,7 @@ const userSchema = new Schema<UserType>({
         // 'this' is the User object
         // console.log('this', this);
 
-        return validator.isAlphanumeric(val, 'en-US', { ignore: ' ' });
+        return validator.isAlphanumeric(val, 'en-US', { ignore: ' .' });
       },
       message: (props: { value: string }) =>
         `${props.value} can only contain numbers and letters.`,
@@ -80,11 +80,11 @@ const userSchema = new Schema<UserType>({
     trim: true,
     select: false,
     maxLength: [40, 'Password cannot be over 40 characters.'],
-    minLength: [8, 'Password cannot be less than 10 characters.'],
-    validate: {
-      validator: validator.isStrongPassword,
-      message: `Password requirements: minLength: 8, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1.`,
-    },
+    minLength: [4, 'Password cannot be less than 4 characters.'],
+    // validate: {
+    //   validator: validator.isStrongPassword,
+    //   message: `Password requirements: minLength: 8, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1.`,
+    // },
   },
   passwordChangedAt: Date,
   // this should be on the client.
@@ -137,8 +137,10 @@ export async function hashPassword(
 userSchema.methods.hasPasswordChangedAfterToken = async function (
   jwtTimestamp: number
 ): Promise<boolean> {
-  // true is good false bad.
-  if (!this.passwordChangedAt) return false;
+  // true is good false bad. If 'passwordChangedAt' doesn't exist, password has not been changed.
+  if (!this.passwordChangedAt) return true;
+  console.log('hasPasswordChangedAfterToken next');
+
   // jwtTimestamp is in seconds, passwordChanged is in milliseconds.
   const changedTime = Math.floor(
     (this.passwordChangedAt as Date).getTime() / 1000

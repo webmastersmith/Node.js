@@ -63,9 +63,10 @@ export const getTourById = catchAsync(
   404,
   async (req: Request, res: Response, next: NextFunction) => {
     // curl -i http://localhost:8080/api/v1/tours/636195d2f2b523404ef1faf8
-    // console.log( req.params.id);
+    // console.log('getTourById id', req.params.id);
     // returns tour or null
     const tour = await Tour.findById(req.params.id).exec();
+    // console.log('getTourById tour', tour);
     if (!tour) {
       throw new Error(`Tour ${req.params.id} not found :-(`);
     }

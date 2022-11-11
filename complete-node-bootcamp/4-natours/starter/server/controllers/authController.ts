@@ -9,6 +9,23 @@ import { Document } from 'mongoose';
 
 // import ApiFeatures from '../utils/ApiFeatures';
 
+export const createCookie = async (token: string, res: Response) => {
+  type CookieType = {
+    expires: Date;
+    httpOnly: boolean;
+    secure?: boolean;
+  };
+  const cookieObject: CookieType = {
+    // 2 hours = hours,hour,minute,second
+    expires: new Date(Date.now() + 2 * 60 * 60 * 1000),
+    httpOnly: true,
+  };
+  if (process.env.NODE_ENV === 'production') cookieObject.secure = true;
+
+  res.cookie('jwt', token, cookieObject);
+  return;
+};
+
 export const signup = catchAsync(
   400,
   async (req: Request, res: Response, next: NextFunction) => {
@@ -26,6 +43,7 @@ export const signup = catchAsync(
 
     const token = await createEncryptedToken(user, '2h');
     if (token) {
+      await createCookie(token, res);
       res.status(201).json({
         status: 'success',
         token,
@@ -41,7 +59,7 @@ export const signup = catchAsync(
 export const login = catchAsync(
   400,
   async (req: Request, res: Response, next: NextFunction) => {
-    // console.log('reqBody', req.body);
+    console.log('login reqBody', req.body);
     // breakdown body so injection is harder.
     const { email, password } = req.body;
     if (!email || !password) {
@@ -50,7 +68,7 @@ export const login = catchAsync(
 
     // returns user or null.
     const user = await User.findOne({ email }).select('+password').exec();
-    console.log(user);
+    console.log('login', { user });
 
     if (!user || !(await user.isValidPassword(password))) {
       return next(new ExpressError(401, 'Email or Password Problem.'));
@@ -58,6 +76,8 @@ export const login = catchAsync(
     // user is valid
     console.log('valid user');
     const token = await createEncryptedToken(user, '2h');
+    if (!token) return next(new ExpressError(400, 'Problem creating token'));
+    await createCookie(token, res);
 
     res.status(201).json({
       status: 'success',
@@ -73,6 +93,7 @@ export const protect = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     // console.log('reqBody', req.body);
     // 1. Get token & email
+    // console.log('protect cookie', req.cookies);
     const token = req.headers?.authorization?.split(' ')[1];
     // console.log('protect', token);
 
@@ -81,6 +102,7 @@ export const protect = catchAsync(
     // 3. does user exist?
     if (Array.isArray(token))
       return next(new ExpressError(400, 'Token is Array'));
+    // returns user or null
     const user = await isValidToken(token);
     if (!user) return next(new ExpressError(401, 'Please login again.'));
     // 4. Did user change pw after token was issued?

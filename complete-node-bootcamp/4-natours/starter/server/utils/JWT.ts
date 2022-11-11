@@ -70,6 +70,8 @@ export const createEncryptedToken = async (
   // const verify = JWT.verify(decryptedToken, JWT_KEY);
   // console.log(verify);
 };
+
+// returns a user(Document) or null
 export const isValidToken = async (
   encryptedToken: string
 ): Promise<
@@ -102,8 +104,7 @@ export const isValidToken = async (
   // returns user or null
   const user = await User.findById(id).select('+password').exec();
   // console.log('isValidToken user:', user);
-
-  if (id === user?._id.toString()) {
+  if (id === user?.id) {
     user.iat = iat;
     user.exp = exp;
     // console.log('jwt user', user);

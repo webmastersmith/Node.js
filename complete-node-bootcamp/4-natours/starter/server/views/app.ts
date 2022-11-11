@@ -5,13 +5,45 @@ import tourRouter from './tourRoutes';
 import userRouter from './userRoutes';
 import ExpressError from '../utils/Error_Handling';
 import MainErrorHandler from '../controllers/errorController';
+import { rateLimit } from 'express-rate-limit';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import xss from 'xss-clean';
+import hpp from 'hpp';
+import cookieParser from 'cookie-parser';
 
 const app = express();
 
 // Middleware
-app.use(express.json());
+app.use(helmet());
+// Apply the rate limiting middleware to all requests
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+app.use('/api', limiter);
+// Body Parser
+app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Data Sanitize nosQL query injection
+app.use(
+  mongoSanitize({
+    replaceWith: '_',
+  })
+);
+// Data Sanitize XSS
+app.use(xss());
+// Parameter Pollution
+app.use(hpp());
+
+// static content
 app.use(express.static(`${process.cwd()}/public`));
+
+// cookies
+app.use(cookieParser());
 
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));

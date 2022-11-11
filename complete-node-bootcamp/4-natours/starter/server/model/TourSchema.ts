@@ -1,4 +1,4 @@
-import { Schema, model, QueryOptions } from 'mongoose';
+import mongoose, { Schema, model, QueryOptions } from 'mongoose';
 import slugify from 'slugify';
 import validator from 'validator';
 // import { inspect } from 'node:util';
@@ -95,6 +95,32 @@ const tourSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    startLocation: {
+      // GeoJSON
+      type: {
+        type: String,
+        default: 'Point',
+        enum: ['Point'],
+      },
+      coordinates: [Number], // array of numbers
+      address: String,
+      description: String,
+    },
+    locations: [
+      // array tells mongoose to create an 'embedded Documents'
+      {
+        type: {
+          type: String,
+          default: 'Point',
+          enum: ['Point'],
+        },
+        coordinates: [Number],
+        address: String,
+        description: String,
+        day: Number,
+      },
+    ],
+    guides: [{ type: mongoose.Types.ObjectId, ref: 'User' }],
   },
   {
     toJSON: { virtuals: true },
@@ -115,6 +141,22 @@ tourSchema.pre('save', function (next) {
   this.slug = slugify(this.name, { lower: true }); // 'this' points to current document.
   return next();
 });
+// populate any tour find query with 'guides'
+tourSchema.pre(/^find/, function (next) {
+  // 'this' points to current document.
+  this.populate({ path: 'guides', select: '-__v -passwordChangedAt' });
+  return next();
+});
+
+// Create Embedded Document when adding tour.
+// tourSchema.pre('save', async function (next) {
+//   // 'this' points to current document.
+//   // map user id's to find user and store user as embedded document in the Tour.
+//   const guidePromise = this.guides.map((id) => User.findById(id));
+//   this.guides = await Promise.all(guidePromise);
+//   return next();
+// });
+
 // can have multiple middle ware.
 // post middleware example
 // tourSchema.post('save', function (doc, next) {
