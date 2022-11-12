@@ -1,9 +1,10 @@
 import express from 'express';
 import {
   getAllUsers,
-  getUser,
+  getUserById,
   updateUser,
   deleteUser,
+  sanitizeUserInput,
 } from '../controllers/userController';
 import {
   signup,
@@ -40,8 +41,8 @@ router.route('/').get(protect, approvedRoles('admin'), getAllUsers);
 // updateUser Info
 router
   .route('/:id')
-  .get(protect, approvedRoles('admin'), getUser)
-  .patch(protect, approvedRoles('admin'), updateUser)
+  .get(protect, approvedRoles('admin'), getUserById)
+  .patch(protect, sanitizeUserInput, updateUser)
   .delete(protect, approvedRoles('admin'), deleteUser);
 
 export default router;

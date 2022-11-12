@@ -3,6 +3,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import morgan from 'morgan';
 import tourRouter from './tourRoutes';
 import userRouter from './userRoutes';
+import reviewRouter from './reviewRoutes';
 import ExpressError from '../utils/Error_Handling';
 import MainErrorHandler from '../controllers/errorController';
 import { rateLimit } from 'express-rate-limit';
@@ -61,6 +62,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use('/api/v1/tours', tourRouter);
 // Users
 app.use('/api/v1/users', userRouter);
+// reviews
+app.use('/api/v1/reviews', reviewRouter);
 
 // all unhandled routes -if placed at top of list, would always match route.
 app.all('*', (req: Request, res: Response, next: NextFunction) => {

@@ -21,6 +21,7 @@ module.exports = {
     // indent: ['warning', 2],
     'linebreak-style': ['error', 'unix'],
     '@typescript-eslint/no-var-requires': 0,
+    '@typescript-eslint/ban-ts-comment': 'off',
     // quotes: ['error', 'single', { allowTemplateLiterals: true }],
     // semi: ['error', 'always'],
     'spaced-comment': 'off',

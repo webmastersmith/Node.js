@@ -1,7 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { Tour } from '../model/TourSchema';
-import ApiFeatures from '../utils/ApiFeatures';
+// import ApiFeatures from '../utils/ApiFeatures';
 import catchAsync from '../utils/catchAsyncError';
+import {
+  factoryDeleteOne,
+  factoryGetAll,
+  factoryUpdateOne,
+  factoryCreateOne,
+  factoryGetOneById,
+} from '../utils/factories';
 // import ExpressError from '../utils/Error_Handling';
 // import ExpressError from '../utils/Error_Handling';
 
@@ -18,112 +25,55 @@ export const aliasTopTours = async (
   return next();
 };
 
-export const getAllTours = catchAsync(
-  400,
-  async (req: Request, res: Response, next: NextFunction) => {
-    // curl -i -X GET http://localhost:8080/api/v1/tours
-    // this does not need error if found nothing, because nothing should be returned.
-    const feature = new ApiFeatures(Tour, req.query)
-      .filter()
-      .sort()
-      .fields()
-      .pageLimit();
-    const tours = (await feature.query) as typeof Tour[];
-
-    res.status(200).json({
-      status: 'success',
-      results: tours.length,
-      data: tours,
-    });
-  }
-);
-
-export const createTour = catchAsync(
-  400,
-  async (req: Request, res: Response, next: NextFunction) => {
-    // curl -i -d '{ "name": "The Jolly Rancher", "price":"497", "rating": "4.3" }' -X POST http://localhost:8080/api/v1/tours -H 'content-type:application/json'
-
-    // returns only if tour successfully created.
-    await Tour.create(req.body);
-
-    // if (!tour) {
-    //   throw new Error(`Tour ${req.params.id} not found :-(`);
-    // }
-
-    res.status(201).json({
-      status: 'success',
-      results: await Tour.count(),
-      data: `${req.body?.name ?? 'Tour'} successfully added.`,
-    });
-  }
-);
-
 // need id
-export const getTourById = catchAsync(
+export const getTourById = factoryGetOneById(Tour, 'reviews');
+
+export const sanitizeTourInput = catchAsync(
   404,
   async (req: Request, res: Response, next: NextFunction) => {
-    // curl -i http://localhost:8080/api/v1/tours/636195d2f2b523404ef1faf8
-    // console.log('getTourById id', req.params.id);
-    // returns tour or null
-    const tour = await Tour.findById(req.params.id).exec();
-    // console.log('getTourById tour', tour);
-    if (!tour) {
-      throw new Error(`Tour ${req.params.id} not found :-(`);
-    }
-
-    res.status(200).json({
-      status: 'success',
-      results: 1,
-      data: tour,
-    });
+    const {
+      name,
+      duration,
+      maxGroupSize,
+      difficulty,
+      ratingsAverage,
+      ratingsQuantity,
+      price,
+      summary,
+      description,
+      imageCover,
+      images,
+      startDates,
+      secretTour,
+      startLocation,
+      locations,
+      guides,
+    } = req.body;
+    const data: any = {};
+    if (name) data.name = name;
+    if (duration) data.duration = duration;
+    if (maxGroupSize) data.maxGroupSize = maxGroupSize;
+    if (difficulty) data.difficulty = difficulty;
+    if (ratingsAverage) data.ratingsAverage = ratingsAverage;
+    if (ratingsQuantity) data.ratingsQuantity = ratingsQuantity;
+    if (price) data.price = price;
+    if (summary) data.summary = summary;
+    if (description) data.description = description;
+    if (imageCover) data.imageCover = imageCover;
+    if (images) data.images = images;
+    if (startDates) data.startDates = startDates;
+    if (secretTour) data.secretTour = secretTour;
+    if (startLocation) data.startLocation = startLocation;
+    if (locations) data.locations = locations;
+    if (guides) data.guides = guides;
+    req.body = data;
+    next();
   }
 );
-
-// patch
-export const updateTour = catchAsync(
-  404,
-  async (req: Request, res: Response, next: NextFunction) => {
-    // curl -i -d '{ "name": "The Forest Hiker2" }' -X PATCH http://localhost:8080/api/v1/tours/636195d2f2b523404ef1faf8 -H 'content-type:application/json'
-    // returns tour or null
-    const tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
-      returnDocument: 'after',
-      runValidators: true,
-    }).exec();
-
-    if (!tour) {
-      throw new Error(`Tour ${req.params.id} could not be found.`);
-    }
-
-    res.status(200).json({
-      status: 'success',
-      results: 1,
-      data: `${tour?.name ?? 'Tour'} successfully updated.`,
-    });
-  }
-);
-
-export const deleteTour = catchAsync(
-  404,
-  async (req: Request, res: Response, next: NextFunction) => {
-    // curl -i -X DELETE http://localhost:8080/api/v1/tours/6362aaaea834e079676c0432
-    console.log('delete tour', req.user, req.params.id);
-
-    // returns tour or null
-    const tour = await Tour.findByIdAndDelete(req.params.id);
-    console.log('delete tour', tour);
-
-    if (!tour) {
-      throw new Error(`Tour ${req.params.id} could not be found.`);
-    }
-    console.log(tour);
-
-    res.status(200).json({
-      status: 'success',
-      results: 1,
-      data: `${tour?.name || 'Tour'} was deleted.`,
-    });
-  }
-);
+export const updateTour = factoryUpdateOne(Tour); // sanitize input
+export const getAllTours = factoryGetAll(Tour);
+export const createTour = factoryCreateOne(Tour); // sanitize input
+export const deleteTour = factoryDeleteOne(Tour);
 
 export const getTourStats = catchAsync(
   404,

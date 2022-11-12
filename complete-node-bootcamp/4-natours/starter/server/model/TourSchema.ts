@@ -129,7 +129,14 @@ const tourSchema = new Schema(
 );
 
 tourSchema.virtual('durationWeeks').get(function () {
-  return this.duration / 7;
+  if (this.duration) return this.duration / 7;
+  return;
+});
+// this data will show up as 'null' unless you use 'populate' fn on the tourController.
+tourSchema.virtual('reviews', {
+  ref: 'Review', // Model name
+  foreignField: 'tour', //look at the 'Review' model 'tour' field.
+  localField: '_id', // if foreignField value match this _id field value, include in output.
 });
 
 // mongoose middleware
@@ -144,7 +151,7 @@ tourSchema.pre('save', function (next) {
 // populate any tour find query with 'guides'
 tourSchema.pre(/^find/, function (next) {
   // 'this' points to current document.
-  this.populate({ path: 'guides', select: '-__v -passwordChangedAt' });
+  this.populate({ path: 'guides', select: 'name photo role' });
   return next();
 });
 

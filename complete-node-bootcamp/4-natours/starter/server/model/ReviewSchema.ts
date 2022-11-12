@@ -23,14 +23,14 @@ const reviewSchema = new Schema<ReviewType>(
     rating: {
       type: Number,
       required: [true, 'Rating is required.'],
-      unique: true,
       trim: true,
       max: [5, 'Enter value 1 to 5 stars.'],
       min: [1, 'Enter value 1 to 5 stars.'],
     },
     createdAt: {
       type: Date,
-      default: new Date(),
+      // prettier-ignore
+      default: new Date,
     },
     tour: {
       type: mongoose.Types.ObjectId,
@@ -69,7 +69,11 @@ reviewSchema.virtual('yourMadeUpKeyName').get(function () {
 // populate any tour find query with 'guides'
 reviewSchema.pre(/^find/, function (next) {
   // 'this' points to current document.
-  this.populate({ path: 'guides', select: '-__v -passwordChangedAt' });
+  this.populate({ path: 'user', select: 'name photo' });
+  this.populate({
+    path: 'tour',
+    select: 'name price guides',
+  });
   return next();
 });
-export const User = model('User', reviewSchema);
+export const Review = model('Review', reviewSchema);

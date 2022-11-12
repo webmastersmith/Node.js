@@ -5,6 +5,7 @@ import crypto from 'crypto';
 
 export interface UserType {
   _id: string;
+  id: string;
   name: string;
   email: string;
   photo?: string;
@@ -139,8 +140,6 @@ userSchema.methods.hasPasswordChangedAfterToken = async function (
 ): Promise<boolean> {
   // true is good false bad. If 'passwordChangedAt' doesn't exist, password has not been changed.
   if (!this.passwordChangedAt) return true;
-  console.log('hasPasswordChangedAfterToken next');
-
   // jwtTimestamp is in seconds, passwordChanged is in milliseconds.
   const changedTime = Math.floor(
     (this.passwordChangedAt as Date).getTime() / 1000
@@ -192,8 +191,7 @@ userSchema.pre('save', async function (next) {
 });
 // block showing any docs with active set to false.
 userSchema.pre(/^find/, async function (this: QueryOptions, next) {
-  console.log('userSchema find active', this.getFilter());
-
+  // console.log('userSchema find active', this.getFilter());
   this.find({ active: { $ne: false } });
   return next();
 });
