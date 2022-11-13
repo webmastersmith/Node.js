@@ -14,6 +14,7 @@ import {
   updatePassword,
   protect,
   approvedRoles,
+  onlyMe,
 } from '../controllers/authController';
 
 // Users
@@ -29,20 +30,26 @@ router.route('/forgotPassword').post(forgotPassword);
 router.route('/resetPassword/:token').patch(resetPassword);
 // updatePassword logged in user.
 router.route('/updatePassword').patch(protect, updatePassword);
+
+// everything after this line, user will have to be logged in.
+router.use(protect);
 // update user info
 router
-  .route('/updateMe')
-  .patch(protect, updateUser)
-  .delete(protect, deleteUser);
+  .route('/me')
+  .get(onlyMe, getUserById)
+  .patch(onlyMe, updateUser)
+  .delete(onlyMe, deleteUser);
 
+// all routes below this must be an 'admin'.
+router.use(approvedRoles('admin'));
 // get all Users -admin only
-router.route('/').get(protect, approvedRoles('admin'), getAllUsers);
+router.route('/').get(getAllUsers);
 
 // updateUser Info
 router
   .route('/:id')
-  .get(protect, approvedRoles('admin'), getUserById)
-  .patch(protect, sanitizeUserInput, updateUser)
-  .delete(protect, approvedRoles('admin'), deleteUser);
+  .get(getUserById)
+  .patch(sanitizeUserInput, updateUser)
+  .delete(deleteUser);
 
 export default router;

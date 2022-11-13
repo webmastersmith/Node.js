@@ -1,4 +1,5 @@
 import { Model } from 'mongoose';
+// import { inspect } from 'node:util';
 
 type QueryObj = {
   page?: string;
@@ -9,11 +10,11 @@ type QueryObj = {
 };
 
 export default class ApiFeatures {
-  model: typeof Model;
+  model: ReturnType<typeof Model.find>;
   query: ReturnType<typeof Model.find> | undefined;
   reqQuery: QueryObj;
 
-  constructor(model: typeof Model, reqQuery: QueryObj) {
+  constructor(model: ReturnType<typeof Model.find>, reqQuery: QueryObj) {
     this.reqQuery = reqQuery;
     this.model = model;
     this.query;
@@ -32,8 +33,8 @@ export default class ApiFeatures {
       (match) => `$${match}`
     );
     // instantiate query (Model).
+    console.log('ApiFeature', reqObjString);
     this.query = this.model.find(JSON.parse(reqObjString));
-    // console.log('filter method');
     return this;
   }
 
@@ -79,6 +80,7 @@ export default class ApiFeatures {
         this.query = this.query.skip(skip).limit(limit);
       }
     }
+    // console.log('ApiFeature pageLimit', inspect(this.query));
     return this;
   }
 }

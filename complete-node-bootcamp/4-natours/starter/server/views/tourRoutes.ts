@@ -19,15 +19,30 @@ router.use('/:tourId/reviews', reviewRouter); // when you see this route, hand o
 // add new route with custom logic built in.
 router.route('/top-5-tours').get(aliasTopTours, getAllTours);
 router.route('/stats').get(getTourStats);
-router.route('/plan/:year').get(monthlyTourPlan);
+router
+  .route('/plan/:year')
+  .get(protect, approvedRoles('admin', 'lead-guide'), monthlyTourPlan);
 
-router.route('/').get(protect, getAllTours).post(sanitizeTourInput, createTour);
+router
+  .route('/')
+  .get(getAllTours)
+  .post(
+    protect,
+    approvedRoles('admin', 'lead-guide'),
+    sanitizeTourInput,
+    createTour
+  );
 
 // router.param('id', checkId);
 router
   .route('/:id')
   .get(getTourById)
-  .patch(sanitizeTourInput, updateTour)
+  .patch(
+    protect,
+    approvedRoles('admin', 'lead-guide'),
+    sanitizeTourInput,
+    updateTour
+  )
   .delete(protect, approvedRoles('admin', 'lead-guide'), deleteTour);
 
 export default router;

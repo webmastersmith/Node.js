@@ -1,9 +1,52 @@
-import mongoose, { Schema, model, QueryOptions } from 'mongoose';
+import { Schema, model, QueryOptions, Types, Model } from 'mongoose';
 import slugify from 'slugify';
 import validator from 'validator';
-// import { inspect } from 'node:util';
+import { UserType } from './UserSchema';
 
-const tourSchema = new Schema(
+type locationType = {
+  _id: Types.ObjectId;
+  type: 'Point';
+  coordinates: Types.Array<number>;
+  address: string;
+  description: string;
+  day: number;
+};
+type guideType = { type: Types.ObjectId; ref: UserType };
+type startLocationType = {
+  type: 'Point';
+  coordinates: Types.Array<number>;
+  address: string;
+  description: string;
+};
+
+export interface TourType {
+  _id: Types.ObjectId;
+  id: string;
+  name: string;
+  slug?: string;
+  duration: number;
+  maxGroupSize: number;
+  difficulty: 'easy' | 'medium' | 'difficult';
+  ratingsAverage: number;
+  ratingsQuantity: number;
+  price: number;
+  priceDiscount: number;
+  summary: string;
+  description: string;
+  imageCover: string;
+  images: Types.Array<string>;
+  createdAt: Date;
+  startDates: Types.Array<Date>;
+  secretTour: boolean;
+  startLocation: startLocationType;
+  locations: Types.Array<locationType>;
+  guides: Types.DocumentArray<guideType>;
+}
+// export interface TourTypeMethods extends Model<TourType> {
+//   calcAverageRatings(): Promise<void>;
+// }
+
+const tourSchema = new Schema<TourType>(
   {
     name: {
       type: String,
@@ -54,15 +97,15 @@ const tourSchema = new Schema(
     priceDiscount: {
       type: Number,
       validate: {
-        message: (props: { value: string }) =>
+        message: (props: { value: number }) =>
           `${props.value} has to be less than price.`,
         // 'this' is actually 'Tour' but don't have access to it yet.
-        validator: function (this: { price: number }, val: string) {
+        validator: function (this: TourType, value: number): boolean {
           // 'val' is the value passed into priceDiscount.
           // test if discount is less than price.
-          const numVal = +val;
+          const numVal = +value;
           if (typeof numVal === 'number') {
-            return +val < this.price;
+            return +numVal < this.price;
           }
           return false;
         },
@@ -86,7 +129,8 @@ const tourSchema = new Schema(
     },
     createdAt: {
       type: Date,
-      default: Date.now(),
+      // prettier-ignore
+      default: Date.now,
     },
     startDates: {
       type: [Date],
@@ -120,13 +164,15 @@ const tourSchema = new Schema(
         day: Number,
       },
     ],
-    guides: [{ type: mongoose.Types.ObjectId, ref: 'User' }],
+    guides: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   },
   {
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
   }
 );
+
+// export type TourType = InferSchemaType<typeof tourSchema>;
 
 tourSchema.virtual('durationWeeks').get(function () {
   if (this.duration) return this.duration / 7;
@@ -139,7 +185,10 @@ tourSchema.virtual('reviews', {
   localField: '_id', // if foreignField value match this _id field value, include in output.
 });
 
+tourSchema.index({ price: 1, ratingsAverage: -1 });
 // mongoose middleware
+
+// Model Methods
 
 // DOCUMENT MIDDLEWARE
 // only runs with a 'save' event. 'save()', 'create()', but not on 'insertMany()'.
@@ -191,4 +240,4 @@ tourSchema.pre('aggregate', function (this, next) {
   return next();
 });
 
-export const Tour = model('Tour', tourSchema);
+export const Tour = model<TourType>('Tour', tourSchema);

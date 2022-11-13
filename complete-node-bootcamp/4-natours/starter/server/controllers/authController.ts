@@ -275,3 +275,12 @@ export const updatePassword = catchAsync(
     });
   }
 );
+
+// Me routes
+export const onlyMe = catchAsync(
+  400,
+  async (req: Request, res: Response, next: NextFunction) => {
+    req.params.id = req.user.id;
+    next();
+  }
+);

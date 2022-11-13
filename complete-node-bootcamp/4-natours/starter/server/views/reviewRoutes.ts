@@ -5,26 +5,34 @@ import {
   updateReview,
   deleteReview,
   sanitizeReviewInput,
-  sanitizeAddUserIdAndTourId,
+  setUserIdAndTourId,
+  getReviewById,
+  setReviewId,
 } from '../controllers/reviewController';
-import { protect, approvedRoles } from '../controllers/authController';
+import { protect, approvedRoles, onlyMe } from '../controllers/authController';
 
 const router = express.Router({ mergeParams: true });
 
-// POST '/:tourId/reviews'
+router.use(protect);
+// POST '/tours/:tourId/reviews'
 // POST '/' // both routes will go to same place.
-router.route('/').get(getAllReviews);
+router
+  .route('/')
+  .get(getAllReviews)
+  .post(onlyMe, sanitizeReviewInput, setUserIdAndTourId, createReview);
 
 // id = reviewId
 router
+  .route('/me')
+  .get(onlyMe, setReviewId, getAllReviews)
+  .patch(onlyMe, sanitizeReviewInput, updateReview)
+  .delete(onlyMe, deleteReview);
+
+router.use(approvedRoles('admin'));
+router
   .route('/:id')
-  .patch(protect, sanitizeReviewInput, updateReview)
-  .post(
-    protect,
-    approvedRoles('user'),
-    sanitizeAddUserIdAndTourId,
-    createReview
-  )
-  .delete(protect, deleteReview);
+  .get(getReviewById)
+  .patch(sanitizeReviewInput, updateReview)
+  .delete(deleteReview);
 
 export default router;

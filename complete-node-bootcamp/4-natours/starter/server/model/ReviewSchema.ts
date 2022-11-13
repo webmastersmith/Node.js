@@ -1,17 +1,22 @@
-import mongoose, { Schema, model } from 'mongoose';
-import { UserType } from './UserSchema';
+import { Schema, model, Types, Model } from 'mongoose';
+import ExpressError from '../utils/Error_Handling';
 import { Tour } from './TourSchema';
+// import { UserType } from './UserSchema';
 
 export interface ReviewType {
-  _id: string;
+  _id: Types.ObjectId;
+  id: string;
   review: string;
   rating: number;
   createdAt: Date;
-  tour: typeof Tour;
-  user: UserType;
+  tour: Types.ObjectId;
+  user: Types.ObjectId;
+}
+export interface ReviewTypeMethods extends Model<ReviewType> {
+  calcAverageRatings(): Promise<void>;
 }
 
-const reviewSchema = new Schema<ReviewType>(
+const reviewSchema = new Schema<ReviewType, ReviewTypeMethods>(
   {
     review: {
       type: String,
@@ -33,12 +38,12 @@ const reviewSchema = new Schema<ReviewType>(
       default: new Date,
     },
     tour: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'Tour',
       required: [true, 'Review must belong to a Tour.'],
     },
     user: {
-      type: mongoose.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Review must belong to a User.'],
     },
@@ -52,6 +57,35 @@ const reviewSchema = new Schema<ReviewType>(
 // perform function only on output results.
 reviewSchema.virtual('yourMadeUpKeyName').get(function () {
   return this.rating + 10;
+});
+
+reviewSchema.statics.calcAverageRatings = async function (tourId: string) {
+  // 'this' is the 'Model.
+  const stats: { _id: Types.ObjectId; numTours: number; avgRating: number }[] =
+    await this.aggregate([
+      {
+        $match: { tour: tourId },
+      },
+      {
+        $group: {
+          _id: '$tour',
+          numTours: { $count: {} },
+          avgRating: { $avg: '$rating' },
+        },
+      },
+    ]);
+  const tour = await Tour.findById(tourId);
+  console.log('tour calcAverageRatings', tour);
+
+  if (!tour) return new ExpressError(400, 'Tour not found.');
+  tour.ratingsAverage = stats[0].avgRating;
+  tour.ratingsQuantity = stats[0].numTours;
+  await tour.save();
+};
+
+reviewSchema.post('save', async function (this: any) {
+  // this is Document being saved.
+  await this.constructor.calcAverageRatings(this.tour);
 });
 
 // // attach method
@@ -76,4 +110,7 @@ reviewSchema.pre(/^find/, function (next) {
   });
   return next();
 });
-export const Review = model('Review', reviewSchema);
+export const Review = model<ReviewType, ReviewTypeMethods>(
+  'Review',
+  reviewSchema
+);

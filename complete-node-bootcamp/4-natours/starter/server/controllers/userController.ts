@@ -11,8 +11,6 @@ import {
   factoryGetOneById,
 } from '../utils/factories';
 
-// User Handlers
-
 // custom middleware to updateUser
 export const sanitizeUserInput = catchAsync(
   400,
