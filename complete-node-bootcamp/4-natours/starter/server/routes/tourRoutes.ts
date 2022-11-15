@@ -9,9 +9,11 @@ import {
   getTourStats,
   monthlyTourPlan,
   sanitizeTourInput,
+  getTourWithIn,
+  getDistance,
 } from '../controllers/tourController';
 import { protect, approvedRoles } from '../controllers/authController';
-import reviewRouter from '../views/reviewRoutes';
+import reviewRouter from './reviewRoutes';
 
 const router = express.Router();
 router.use('/:tourId/reviews', reviewRouter); // when you see this route, hand off to reviewRouter.
@@ -22,6 +24,10 @@ router.route('/stats').get(getTourStats);
 router
   .route('/plan/:year')
   .get(protect, approvedRoles('admin', 'lead-guide'), monthlyTourPlan);
+
+// geo spatial routes
+router.route('/within/:distance/center/:latlng/unit/:unit').get(getTourWithIn);
+router.route('/distance/:latlng/unit/:unit').get(getDistance);
 
 router
   .route('/')

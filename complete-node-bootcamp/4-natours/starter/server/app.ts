@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import morgan from 'morgan';
-import tourRouter from './tourRoutes';
-import userRouter from './userRoutes';
-import reviewRouter from './reviewRoutes';
-import ExpressError from '../utils/Error_Handling';
-import MainErrorHandler from '../controllers/errorController';
+import tourRouter from './routes/tourRoutes';
+import userRouter from './routes/userRoutes';
+import reviewRouter from './routes/reviewRoutes';
+import ExpressError from './utils/Error_Handling';
+import MainErrorHandler from './controllers/errorController';
 import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
@@ -14,7 +14,8 @@ import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
 
 const app = express();
-
+app.set('view engine', 'pug');
+app.set('views', `${process.cwd()}/views`);
 // Middleware
 app.use(helmet());
 // Apply the rate limiting middleware to all requests

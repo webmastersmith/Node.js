@@ -85,6 +85,7 @@ const tourSchema = new Schema<TourType>(
       default: 4.5,
       min: [1, 'Rating should be greater than 0.9 '],
       max: [5, 'Rating should be less than 5.1 '],
+      set: (val: number) => Math.round(val * 10 ** 1) / 10 ** 1,
     },
     ratingsQuantity: {
       type: Number,
@@ -186,6 +187,9 @@ tourSchema.virtual('reviews', {
 });
 
 tourSchema.index({ price: 1, ratingsAverage: -1 });
+// if index describes geo spatial data, use '2dsphere'
+tourSchema.index({ startLocation: '2dsphere' }); // earth like data points. 'sphere' shaped.
+
 // mongoose middleware
 
 // Model Methods
@@ -230,14 +234,16 @@ tourSchema.pre(/^find/, function (this: QueryOptions, next) {
 });
 
 // AGGREGATION MIDDLEWARE
-tourSchema.pre('aggregate', function (this, next) {
-  // 'this' is the aggregate object
-  // remove all secret tours from aggregate function.
-  this.pipeline().unshift({
-    $match: { secretTour: { $ne: true } },
-  });
-  // console.log(inspect(this, { sorted: true, depth: null }));
-  return next();
-});
+// tourSchema.pre('aggregate', function (next) {
+//   // 'this' is the aggregate object
+//   // remove all secret tours from aggregate function.
+//   console.log('tourSchema aggregate this', this.pipeline());
+
+//   this.pipeline().unshift({
+//     $match: { secretTour: { $ne: true } },
+//   });
+//   // console.log(inspect(this, { sorted: true, depth: null }));
+//   next();
+// });
 
 export const Tour = model<TourType>('Tour', tourSchema);

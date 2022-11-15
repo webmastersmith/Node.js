@@ -51,6 +51,10 @@ export const factoryGetAll = (Model: Model<any>) =>
 // prettier-ignore
 export const factoryUpdateOne = (Model: Model<any>) => catchAsync( 400, async (req, res, next) => {
   // body should be sanitized with custom middleware.
+  // patch review as user.
+  if (req.params.reviewId) req.params.id = req.params.reviewId
+  
+  // console.log('factoryUpdateOne id', req.params.id);  
   const doc = await Model.findByIdAndUpdate(req.params.id, req.body, {
     returnDocument: 'after',
     runValidators: true,

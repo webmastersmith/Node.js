@@ -1,4 +1,4 @@
-import app from './views/app';
+import app from './app';
 import 'dotenv/config';
 import mongoose from 'mongoose';
 

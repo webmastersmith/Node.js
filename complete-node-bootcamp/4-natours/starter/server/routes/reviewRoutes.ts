@@ -23,7 +23,7 @@ router
 
 // id = reviewId
 router
-  .route('/me')
+  .route('/me/:reviewId?')
   .get(onlyMe, setReviewId, getAllReviews)
   .patch(onlyMe, sanitizeReviewInput, updateReview)
   .delete(onlyMe, deleteReview);

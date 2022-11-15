@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Tour, TourType } from '../model/TourSchema';
 import catchAsync from '../utils/catchAsyncError';
+import ExpressError from '../utils/Error_Handling';
 import {
   factoryDeleteOne,
   factoryGetAll,
@@ -21,6 +22,64 @@ export const aliasTopTours = async (
   req.query.fields = 'name,price,ratingsAverage,summary,difficulty';
   return next();
 };
+
+// geo spatial. Return Tours within a radius.
+export const getTourWithIn = catchAsync(404, async (req, res, next) => {
+  const { unit, distance, latlng } = req.params;
+  const [lat, lng] = latlng.split(',');
+  // needs to be in radian. which is distance / radius of earth.
+  // unit if not miles, must be kilometers.
+  const radians = unit === 'mi' ? +distance / 3963.2 : +distance / 6378.1;
+  if (!unit || !distance || !lat || !lng)
+    return next(new ExpressError(400, 'Provide distance, latlng, units. '));
+  // console.log({ lat, lng, unit, distance, latlng });
+  const tours = await Tour.find({
+    startLocation: { $geoWithin: { $centerSphere: [[lng, lat], radians] } },
+  });
+
+  res.status(200).json({
+    status: 'success',
+    results: tours.length,
+    data: { data: tours },
+  });
+});
+
+// geo spatial. Return Tours distance away from your location.
+export const getDistance = catchAsync(404, async (req, res, next) => {
+  const { unit, latlng } = req.params;
+  const [lat, lng] = latlng.split(',');
+  // needs to be in radian. which is distance / radius of earth.
+  // unit if not miles, must be kilometers.
+  if (!unit || !lat || !lng)
+    return next(new ExpressError(400, 'Provide latlng, units. '));
+  // console.log({ lat, lng, unit, latlng });
+  // miles or kilometers
+  const multiplier = unit === 'mi' ? 0.000621371 : 0.001;
+  const distances = await Tour.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: 'Point',
+          coordinates: [+lng, +lat],
+        },
+        distanceField: 'distance',
+        distanceMultiplier: multiplier,
+      },
+    },
+    {
+      $project: {
+        distance: 1,
+        name: 1,
+      },
+    },
+  ]);
+
+  res.status(200).json({
+    status: 'success',
+    results: distances.length,
+    data: { data: distances },
+  });
+});
 
 export const sanitizeTourInput = catchAsync(404, async (req, res, next) => {
   const {

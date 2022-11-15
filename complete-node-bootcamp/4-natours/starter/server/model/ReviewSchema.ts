@@ -1,7 +1,16 @@
-import { Schema, model, Types, Model } from 'mongoose';
-import ExpressError from '../utils/Error_Handling';
+import {
+  Schema,
+  model,
+  Types,
+  Model,
+  QueryOptions,
+  HydratedDocument,
+  Query,
+} from 'mongoose';
+// import ExpressError from '../utils/Error_Handling';
 import { Tour } from './TourSchema';
 // import { UserType } from './UserSchema';
+import { inspect } from 'node:util';
 
 export interface ReviewType {
   _id: Types.ObjectId;
@@ -13,10 +22,13 @@ export interface ReviewType {
   user: Types.ObjectId;
 }
 export interface ReviewTypeMethods extends Model<ReviewType> {
-  calcAverageRatings(): Promise<void>;
+  calcAverageRatings(tourId: Types.ObjectId, doc: Model<any>): Promise<void>;
+}
+interface ReviewModel extends Model<ReviewType, {}, ReviewTypeMethods> {
+  CAR(tourId: Types.ObjectId): Promise<string>;
 }
 
-const reviewSchema = new Schema<ReviewType, ReviewTypeMethods>(
+const reviewSchema = new Schema<ReviewType, ReviewModel, ReviewTypeMethods>(
   {
     review: {
       type: String,
@@ -59,10 +71,16 @@ reviewSchema.virtual('yourMadeUpKeyName').get(function () {
   return this.rating + 10;
 });
 
-reviewSchema.statics.calcAverageRatings = async function (tourId: string) {
+// ensure user can only review same tour once.
+reviewSchema.index({ tour: 1, user: 1 }, { unique: true });
+
+async function calcAvgRatings(
+  tourId: string,
+  doc: Model<ReviewType, ReviewTypeMethods>
+) {
   // 'this' is the 'Model.
   const stats: { _id: Types.ObjectId; numTours: number; avgRating: number }[] =
-    await this.aggregate([
+    await doc.aggregate([
       {
         $match: { tour: tourId },
       },
@@ -74,19 +92,46 @@ reviewSchema.statics.calcAverageRatings = async function (tourId: string) {
         },
       },
     ]);
-  const tour = await Tour.findById(tourId);
-  console.log('tour calcAverageRatings', tour);
+  console.log('stats', stats);
 
-  if (!tour) return new ExpressError(400, 'Tour not found.');
-  tour.ratingsAverage = stats[0].avgRating;
-  tour.ratingsQuantity = stats[0].numTours;
-  await tour.save();
-};
+  if (stats.length > 0) {
+    await Tour.findByIdAndUpdate(tourId, {
+      ratingsAverage: stats[0].avgRating,
+      ratingsQuantity: stats[0].numTours,
+    });
+  } else {
+    await Tour.findByIdAndUpdate(tourId, {
+      ratingsAverage: 4.5,
+      ratingsQuantity: 0,
+    });
+  }
+}
 
-reviewSchema.post('save', async function (this: any) {
-  // this is Document being saved.
-  await this.constructor.calcAverageRatings(this.tour);
+reviewSchema.method('calcAverageRatings', calcAvgRatings);
+reviewSchema.static('CAR', calcAvgRatings);
+
+// update Tour review stats when review added.
+reviewSchema.post('save', async function (doc, next) {
+  await this.calcAverageRatings(
+    doc.tour,
+    this.constructor as Model<ReviewType, ReviewTypeMethods>
+  );
+  next();
 });
+// update Tour review stats when review modified.
+reviewSchema.post(
+  /^findOneAnd/,
+  async function (
+    doc: HydratedDocument<ReviewType, ReviewModel, ReviewTypeMethods>,
+    next
+  ) {
+    await doc.calcAverageRatings(
+      doc.tour._id,
+      doc.constructor as Model<ReviewType, ReviewTypeMethods>
+    );
+    next();
+  }
+);
 
 // // attach method
 // reviewSchema.methods.hasPasswordChanged = async function (
@@ -110,7 +155,4 @@ reviewSchema.pre(/^find/, function (next) {
   });
   return next();
 });
-export const Review = model<ReviewType, ReviewTypeMethods>(
-  'Review',
-  reviewSchema
-);
+export const Review = model<ReviewType, ReviewModel>('Review', reviewSchema);
