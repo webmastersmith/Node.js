@@ -179,7 +179,7 @@ tourSchema.virtual('durationWeeks').get(function () {
   if (this.duration) return this.duration / 7;
   return;
 });
-// this data will show up as 'null' unless you use 'populate' fn on the tourController.
+// this data will show up as 'null' unless you use 'populate({path: 'reviews'})' fn on the tourController.
 tourSchema.virtual('reviews', {
   ref: 'Review', // Model name
   foreignField: 'tour', //look at the 'Review' model 'tour' field.

@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import tourRouter from './routes/tourRoutes';
 import userRouter from './routes/userRoutes';
 import reviewRouter from './routes/reviewRoutes';
+import viewRouter from './routes/viewRoutes';
 import ExpressError from './utils/Error_Handling';
 import MainErrorHandler from './controllers/errorController';
 import { rateLimit } from 'express-rate-limit';
@@ -15,9 +16,10 @@ import cookieParser from 'cookie-parser';
 
 const app = express();
 app.set('view engine', 'pug');
-app.set('views', `${process.cwd()}/views`);
+app.set('views', `${process.cwd()}/server/views`);
+
 // Middleware
-app.use(helmet());
+// app.use(helmet());
 // Apply the rate limiting middleware to all requests
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -33,7 +35,7 @@ app.use(express.urlencoded({ extended: true }));
 // Data Sanitize nosQL query injection
 app.use(
   mongoSanitize({
-    replaceWith: '_',
+    replaceWith: ' ',
   })
 );
 // Data Sanitize XSS
@@ -59,6 +61,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // ROUTES
+// Natours Website
+app.use('/', viewRouter);
 // Tours
 app.use('/api/v1/tours', tourRouter);
 // Users
