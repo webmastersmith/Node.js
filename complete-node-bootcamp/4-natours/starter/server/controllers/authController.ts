@@ -56,37 +56,35 @@ export const signup = catchAsync(
   }
 );
 
-export const login = catchAsync(
-  400,
-  async (req: Request, res: Response, next: NextFunction) => {
-    console.log('login reqBody', req.body);
-    // breakdown body so injection is harder.
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return next(new ExpressError(400, 'Please provide email and password.'));
-    }
-
-    // returns user or null.
-    const user = await User.findOne({ email }).select('+password').exec();
-    console.log('login', { user });
-
-    if (!user || !(await user.isValidPassword(password))) {
-      return next(new ExpressError(401, 'Email or Password Problem.'));
-    }
-    // user is valid
-    console.log('valid user');
-    const token = await createEncryptedToken(user, '2h');
-    if (!token) return next(new ExpressError(400, 'Problem creating token'));
-    await createCookie(token, res);
-
-    res.status(201).json({
-      status: 'success',
-      token,
-      results: '*',
-      data: { user },
-    });
+export const login = catchAsync(400, async (req, res, next) => {
+  console.log('login reqBody', req.body);
+  // breakdown body so injection is harder.
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return next(new ExpressError(400, 'Please provide email and password.'));
   }
-);
+
+  // returns user or null.
+  const user = await User.findOne({ email }).select('+password').exec();
+  console.log('login', { user });
+
+  if (!user || !(await user.isValidPassword(password))) {
+    return next(new ExpressError(401, 'Email or Password Problem.'));
+  }
+  // user is valid
+  console.log('valid user');
+  const token = await createEncryptedToken(user, '2h');
+  if (!token) return next(new ExpressError(400, 'Problem creating token'));
+  // does not return anything, attaches cookie to response.
+  await createCookie(token, res);
+
+  res.status(201).json({
+    status: 'success',
+    token,
+    results: '*',
+    data: { user },
+  });
+});
 
 export const protect = catchAsync(
   400,
@@ -94,8 +92,14 @@ export const protect = catchAsync(
     // console.log('reqBody', req.body);
     // 1. Get token & email
     // console.log('protect cookie', req.cookies);
-    const token = req.headers?.authorization?.split(' ')[1];
-    // console.log('protect', token);
+    // 'Bearer TOKEN...', split to remove 'Bearer' from token.
+    let token = '';
+    // header token or cookie token?
+    if (req.headers.authorization) {
+      token = req.headers?.authorization?.split(' ')[1];
+    } else if (req.cookies.jwt) {
+      token = req.cookies.jwt.replace('jwt=', '');
+    }
 
     // 2. isTokenValid
     if (!token) return next(new ExpressError(400, 'Token Invalid'));
@@ -121,6 +125,7 @@ export const protect = catchAsync(
     return next();
   }
 );
+
 export const approvedRoles = (...roles: string[]) =>
   catchAsync(403, async (req: Request, res: Response, next: NextFunction) => {
     // user is already attached to req object.

@@ -3,13 +3,15 @@ extends base
 block content
   main.main
     .card-container
-
       each tour in tours
         .card
           .card__header
             .card__picture
               .card__picture-overlay &nbsp;
-              img.card__picture-img(src=`/img/tours/${tour.imageCover}`, alt=`${tour.name}`)
+              img.card__picture-img(
+                src=`/img/tours/${tour.imageCover}`,
+                alt=`${tour.name}`
+              )
             h3.heading-tertirary
               span= tour.name
           .card__details
@@ -22,7 +24,7 @@ block content
             .card__data
               svg.card__icon
                 use(xlink:href="/img/icons.svg#icon-calendar")
-              span= tour.startDates[0].toLocaleString('en-US', { month: 'long', year: 'numeric'})
+              span= tour.startDates[0].toLocaleString("en-US", { month: "long", year: "numeric" })
             .card__data
               svg.card__icon
                 use(xlink:href="/img/icons.svg#icon-flag")
@@ -35,10 +37,10 @@ block content
           .card__footer
             p
               span.card__footer-value= `$${tour.price}`
-              | 
+              |
               span.card__footer-text per person
             p.card__ratings
               span.card__footer-value= tour.ratingsAverage
-              | 
+              |
               span.card__footer-text= `rating (${tour.ratingsQuantity})`
             a.btn.btn--green.btn--small(href=`/tour/${tour.slug}`) Details

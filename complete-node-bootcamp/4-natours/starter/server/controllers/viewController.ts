@@ -1,8 +1,6 @@
 import catchAsync from '../utils/catchAsyncError';
 import { Tour } from '../model/TourSchema';
 import ExpressError from '../utils/Error_Handling';
-// import ApiFeatures from '../utils/ApiFeatures';
-// import { Document } from 'mongoose';
 
 export const getOverview = catchAsync(400, async (req, res, next) => {
   const tours = await Tour.find({});
@@ -22,12 +20,15 @@ export const getTour = catchAsync(400, async (req, res, next) => {
   });
   if (!tour) return next(new ExpressError(400, 'Natours Tour not found'));
 
-  console.log({ tour });
-  // @ts-ignore
-  console.log({ reviews: tour.reviews });
-
   res.status(200).render('tour', {
-    title: 'The Forest Hiker Tour',
+    title: '',
     tour,
+  });
+});
+
+// login page
+export const getLogin = catchAsync(400, async (req, res, next) => {
+  res.status(200).render('login', {
+    title: 'Log into your account',
   });
 });
