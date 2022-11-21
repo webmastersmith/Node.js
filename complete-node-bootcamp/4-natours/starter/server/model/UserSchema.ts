@@ -1,10 +1,10 @@
-import { Schema, model, QueryOptions } from 'mongoose';
+import { Schema, model, Model, QueryOptions, Types } from 'mongoose';
 import validator from 'validator';
 // import { NextFunction } from 'express';
 import crypto from 'crypto';
 
 export interface UserType {
-  _id: string;
+  _id: Types.ObjectId;
   id: string;
   name: string;
   email: string;
@@ -20,12 +20,19 @@ export interface UserType {
   passwordResetTokenExpires: Date;
   active: boolean;
   // setPassword: (pw: string) => Promise<void>;
+}
+
+export interface UserTypeMethods {
   isValidPassword: (password: string) => Promise<boolean>;
   hasPasswordChangedAfterToken: (jwtTimestamp: number) => Promise<boolean>;
   createPasswordResetToken: () => Promise<string>;
 }
 
-const userSchema = new Schema<UserType>({
+export interface UserModel extends Model<UserType, {}, UserTypeMethods> {
+  hashMyPassword: (pw: string, salt: string) => Promise<string>;
+}
+
+const userSchema = new Schema<UserType, UserModel, UserTypeMethods>({
   name: {
     type: String,
     required: [true, 'Name is required.'],
@@ -52,9 +59,9 @@ const userSchema = new Schema<UserType>({
     maxLength: [40, 'Email cannot be over 40 characters.'],
     minLength: [3, 'Valid email cannot be less than 3 characters.'],
     validate: {
-      validator: validator.isEmail,
-      message: (props: { value: string }) =>
-        `${props.value} is not a valid email.`,
+      validator: (val: string): boolean =>
+        validator.isEmail(val) ? true : false,
+      message: (props) => `${props.value} is not a valid email.`,
     },
   },
   photo: {
@@ -134,6 +141,18 @@ export async function hashPassword(
     .toString(`hex`);
   return hash;
 }
+userSchema.static(
+  'hashMyPassword',
+  async function (password: string, salt: string): Promise<string> {
+    // Creating a unique salt for a particular user
+
+    // Hashing user's salt and password with 1000 iterations,
+    const hash = crypto
+      .pbkdf2Sync(password, salt, 1000, 64, `sha512`)
+      .toString(`hex`);
+    return hash;
+  }
+);
 // check if password was changed after jwt-token was created.
 userSchema.methods.hasPasswordChangedAfterToken = async function (
   jwtTimestamp: number
@@ -184,6 +203,7 @@ userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   const salt = crypto.randomBytes(16).toString('hex');
   // password has been modified.
+  const myModel = this.constructor as UserModel;
   const hash = await hashPassword(this.password, salt);
   this.salt = salt;
   this.password = hash;
@@ -196,4 +216,4 @@ userSchema.pre(/^find/, async function (this: QueryOptions, next) {
   return next();
 });
 
-export const User = model('User', userSchema);
+export const User = model<UserType, UserModel>('User', userSchema);

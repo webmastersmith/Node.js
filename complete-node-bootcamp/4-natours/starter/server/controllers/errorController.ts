@@ -38,25 +38,40 @@ export default (
   res: Response,
   next: NextFunction
 ) => {
-  if (err instanceof ExpressError) {
-    err.statusCode = err.statusCode || 500;
-    err.status = err.status || 'error';
-    err.message = err.message || 'unknown error';
-    // this logs the stack trace.
-    // console.log(err.stack);
-  }
+  if (req.originalUrl.startsWith('/api')) {
+    if (err instanceof ExpressError) {
+      err.statusCode = err.statusCode || 500;
+      err.status = err.status || 'error';
+      err.message = err.message || 'unknown error';
+      // this logs the stack trace.
+      // console.log(err.stack);
+    }
 
-  if (err instanceof ExpressError) {
-    console.log('ExpressError');
-    expressError(err, res);
+    if (err instanceof ExpressError) {
+      console.log('ExpressError');
+      expressError(err, res);
+    } else {
+      // catch anything not from express.
+      console.log('GenericError');
+
+      res.status(400).json({
+        status: err.name,
+        message: err.message,
+        error: err,
+      });
+    }
   } else {
-    // catch anything not from express.
-    console.log('GenericError');
-
-    res.status(400).json({
-      status: err.name,
-      message: err.message,
-      error: err,
-    });
+    // must be a webpage. render webpage error.
+    if (err instanceof ExpressError) {
+      res.status(err.statusCode || 500).render('error', {
+        title: 'Something went wrong!',
+        msg: err.msg,
+      });
+    } else {
+      res.status(400).render('error', {
+        title: 'Something went wrong!',
+        msg: err.message,
+      });
+    }
   }
 };

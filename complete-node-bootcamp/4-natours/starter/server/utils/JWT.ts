@@ -1,7 +1,7 @@
-import { UserType } from '../model/UserSchema';
+import { UserModel, UserType, UserTypeMethods } from '../model/UserSchema';
 import JWT from 'jsonwebtoken';
 import { User } from '../model/UserSchema';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export async function encrypt(
   data: string,
@@ -78,8 +78,9 @@ export const isValidToken = async (
   | (Document<unknown, any, UserType> &
       UserType &
       Required<{
-        _id: string;
-      }>)
+        _id: Types.ObjectId;
+      }> &
+      UserTypeMethods)
   | null
 > => {
   require('dotenv').config({ path: './.env' });

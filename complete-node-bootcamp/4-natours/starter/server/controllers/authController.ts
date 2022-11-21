@@ -1,20 +1,25 @@
-import { User, hashPassword, UserType } from '../model/UserSchema';
+import {
+  User,
+  hashPassword,
+  UserType,
+  UserTypeMethods,
+} from '../model/UserSchema';
 import { Request, Response, NextFunction } from 'express';
 import catchAsync from '../utils/catchAsyncError';
 import 'dotenv/config';
 import { createEncryptedToken, isValidToken } from '../utils/JWT';
 import sendEmail from '../utils/email';
 import ExpressError from '../utils/Error_Handling';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 // import ApiFeatures from '../utils/ApiFeatures';
 
+type CookieType = {
+  expires: Date;
+  httpOnly: boolean;
+  secure?: boolean;
+};
 export const createCookie = async (token: string, res: Response) => {
-  type CookieType = {
-    expires: Date;
-    httpOnly: boolean;
-    secure?: boolean;
-  };
   const cookieObject: CookieType = {
     // 2 hours = hours,hour,minute,second
     expires: new Date(Date.now() + 2 * 60 * 60 * 1000),
@@ -85,46 +90,83 @@ export const login = catchAsync(400, async (req, res, next) => {
     data: { user },
   });
 });
+export const logout = catchAsync(400, async (req, res, next) => {
+  const cookieObject: CookieType = {
+    // 2 hours = hours,hour,minute,second
+    expires: new Date(),
+    httpOnly: true,
+  };
 
-export const protect = catchAsync(
-  400,
-  async (req: Request, res: Response, next: NextFunction) => {
-    // console.log('reqBody', req.body);
-    // 1. Get token & email
-    // console.log('protect cookie', req.cookies);
-    // 'Bearer TOKEN...', split to remove 'Bearer' from token.
-    let token = '';
-    // header token or cookie token?
-    if (req.headers.authorization) {
-      token = req.headers?.authorization?.split(' ')[1];
-    } else if (req.cookies.jwt) {
-      token = req.cookies.jwt.replace('jwt=', '');
-    }
+  res.cookie('jwt', 'loggedout', cookieObject);
 
-    // 2. isTokenValid
-    if (!token) return next(new ExpressError(400, 'Token Invalid'));
-    // 3. does user exist?
-    if (Array.isArray(token))
-      return next(new ExpressError(400, 'Token is Array'));
-    // returns user or null
-    const user = await isValidToken(token);
-    if (!user) return next(new ExpressError(401, 'Please login again.'));
-    // 4. Did user change pw after token was issued?
+  res.status(200).redirect('/');
+});
 
-    // console.log('user protect', user);
-    // console.log('user protect iat', user.iat);
-    if (!(await user.hasPasswordChangedAfterToken(user?.iat || Infinity)))
-      return next(
-        new ExpressError(
-          401,
-          'Auth Token older than Password. Please login again.'
-        )
-      );
-    // add user to middleware
-    req.user = user;
-    return next();
+export const protect = catchAsync(400, async (req, res, next) => {
+  // console.log('reqBody', req.body);
+  // 1. Get token & email
+  // console.log('protect cookie', req.cookies);
+  // 'Bearer TOKEN...', split to remove 'Bearer' from token.
+  let token = '';
+  // header token or cookie token?
+  if (req.headers.authorization) {
+    token = req.headers?.authorization?.split(' ')[1];
+  } else if (req.cookies.jwt) {
+    token = req.cookies.jwt.replace('jwt=', '');
   }
-);
+
+  // 2. isTokenValid
+  if (!token) return next(new ExpressError(400, 'Token Invalid'));
+  // 3. does user exist?
+  if (Array.isArray(token))
+    return next(new ExpressError(400, 'Token is Array'));
+  // returns user or null
+  const user = await isValidToken(token);
+  if (!user) return next(new ExpressError(401, 'Please login again.'));
+  // 4. Did user change pw after token was issued?
+
+  // console.log('user protect', user);
+  // console.log('user protect iat', user.iat);
+  if (!(await user.hasPasswordChangedAfterToken(user?.iat || Infinity)))
+    return next(
+      new ExpressError(
+        401,
+        'Auth Token older than Password. Please login again.'
+      )
+    );
+  // add user to middleware
+  req.user = user;
+  res.locals.user = user;
+  return next();
+});
+
+// Only for rendered pages. No Errors.
+export const isLoggedIn = catchAsync(400, async (req, res, next) => {
+  // console.log('reqBody', req.body);
+  // 1. Get token
+  // 'Bearer TOKEN...', split to remove 'Bearer' from token.
+  let token = '';
+  // cookie token
+  if (req.cookies.jwt) {
+    token = req.cookies.jwt.replace('jwt=', '');
+  }
+
+  // 2. isTokenValid
+  if (!token) return next();
+  // 3. does user exist?
+  if (Array.isArray(token)) return next();
+  // returns user or null
+  const user = await isValidToken(token);
+  if (!user) return next();
+
+  // 4. Did user change pw after token was issued?
+  if (!(await user.hasPasswordChangedAfterToken(user?.iat || Infinity)))
+    return next();
+
+  // add user to pug locales
+  res.locals.user = user;
+  next();
+});
 
 export const approvedRoles = (...roles: string[]) =>
   catchAsync(403, async (req: Request, res: Response, next: NextFunction) => {
@@ -248,38 +290,36 @@ export const resetPassword = catchAsync(
     });
   }
 );
-export const updatePassword = catchAsync(
-  400,
-  async (req: Request, res: Response, next: NextFunction) => {
-    // 1. get password
-    const { password, newPassword } = req.body;
-    console.log('updatePassword', { password, newPassword });
-    if (!password || !newPassword)
-      return next(
-        new ExpressError(401, 'Please provide valid password or new password.')
-      );
+export const updatePassword = catchAsync(400, async (req, res, next) => {
+  // 1. get password
+  const { password, newPassword } = req.body;
+  console.log('updatePassword', { password, newPassword });
+  if (!password || !newPassword)
+    return next(
+      new ExpressError(401, 'Please provide valid password or new password.')
+    );
 
-    // 2. get user from req, added from 'protect' function.
-    // prettier-ignore
-    const user = req.user as Document<unknown, any, UserType> & UserType & Required<{ _id: string; }>;
-    // 3. verify password correct.
-    if (!user || !(await user.isValidPassword(password)))
-      return next(
-        new ExpressError(401, 'To update password, please login again.')
-      );
+  // 2. get user from req, added from 'protect' function.
+  // prettier-ignore
+  const user = req.user as (Document<unknown, any, UserType> & UserType & Required<{ _id: Types.ObjectId;}> & UserTypeMethods)
+  | null
+  // 3. verify password correct.
+  if (!user || !(await user.isValidPassword(password)))
+    return next(
+      new ExpressError(401, 'To update password, please login again.')
+    );
 
-    // 4. valid user, now change password.
-    user.password = newPassword;
-    user.passwordChangedAt = new Date();
-    await user.save({ validateModifiedOnly: true });
+  // 4. valid user, now change password.
+  user.password = newPassword;
+  user.passwordChangedAt = new Date();
+  await user.save({ validateModifiedOnly: true });
 
-    res.status(200).json({
-      status: 'success',
-      results: 'Password has been changed.',
-      data: { user },
-    });
-  }
-);
+  res.status(200).json({
+    status: 'success',
+    results: 'Password has been changed.',
+    data: { user },
+  });
+});
 
 // Me routes
 export const onlyMe = catchAsync(

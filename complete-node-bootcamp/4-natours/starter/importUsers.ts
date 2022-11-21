@@ -20,7 +20,8 @@ async function loadUsers(users: UserType[]) {
       fs.readFileSync(`${process.cwd()}/dev-data/data/users.json`, 'utf-8')
     );
     // delete everything.
-    await User.deleteMany({});
+    // await User.deleteMany({});
+    await mongoose.connection.dropCollection('users');
 
     // loadTours
     await loadUsers(data);

@@ -26,6 +26,12 @@ export const getTour = catchAsync(400, async (req, res, next) => {
   });
 });
 
+export const getAccount = catchAsync(400, async (req, res, next) => {
+  res.status(200).render('account', {
+    title: 'Your Account',
+  });
+});
+
 // login page
 export const getLogin = catchAsync(400, async (req, res, next) => {
   res.status(200).render('login', {
