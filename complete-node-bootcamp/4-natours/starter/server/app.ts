@@ -56,19 +56,19 @@ if (process.env.NODE_ENV === 'development') {
 // custom middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   req.requestTime = new Date().toISOString();
-  console.log(req.headers);
+  console.log('headers', req.headers);
   return next();
 });
 
 // ROUTES
-// Natours Website
-app.use('/', viewRouter);
 // Tours
 app.use('/api/v1/tours', tourRouter);
 // Users
 app.use('/api/v1/users', userRouter);
 // reviews
 app.use('/api/v1/reviews', reviewRouter);
+// Natours Website - must come last to avoid naming problems.
+app.use('/', viewRouter);
 
 // all unhandled routes -if placed at top of list, would always match route.
 app.all('*', (req: Request, res: Response, next: NextFunction) => {

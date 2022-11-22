@@ -90,6 +90,7 @@ export const login = catchAsync(400, async (req, res, next) => {
     data: { user },
   });
 });
+
 export const logout = catchAsync(400, async (req, res, next) => {
   const cookieObject: CookieType = {
     // 2 hours = hours,hour,minute,second

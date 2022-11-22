@@ -19,6 +19,8 @@ router.route('/').get(isLoggedIn, getOverview);
 router.route('/tour/:tourName').get(isLoggedIn, getTour);
 router.route('/login').get(isLoggedIn, getLogin).post(login);
 router.route('/logout').get(logout);
-router.route('/me').get(protect, getAccount);
+// protect all these routes
+router.use(protect);
+router.route('/me').get(getAccount);
 
 export default router;

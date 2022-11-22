@@ -66,6 +66,7 @@ const userSchema = new Schema<UserType, UserModel, UserTypeMethods>({
   },
   photo: {
     type: String,
+    default: 'default.jpg',
     // required: [true, 'Email is required.'],
     // unique: true,
     maxLength: [40, 'Photo name cannot be over 40 characters.'],

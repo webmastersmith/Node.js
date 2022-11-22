@@ -5,6 +5,10 @@ import {
   updateUser,
   deleteUser,
   sanitizeUserInput,
+  getMe,
+  updateMe,
+  uploadSinglePhoto,
+  resizePhoto,
 } from '../controllers/userController';
 import {
   signup,
@@ -36,8 +40,8 @@ router.use(protect);
 // update user info
 router
   .route('/me')
-  .get(onlyMe, getUserById)
-  .patch(onlyMe, updateUser)
+  .get(getMe)
+  .patch(sanitizeUserInput, uploadSinglePhoto, resizePhoto, updateMe)
   .delete(onlyMe, deleteUser);
 
 // all routes below this must be an 'admin'.
