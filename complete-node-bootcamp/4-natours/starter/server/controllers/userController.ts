@@ -2,17 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { User, UserType } from '../model/UserSchema';
 import catchAsync from '../utils/catchAsyncError';
 import ExpressError from '../utils/Error_Handling';
-// import ApiFeatures from '../utils/ApiFeatures';
-// import { Document } from 'mongoose';
-// import ExpressError from '../utils/Error_Handling';
+import sharp from 'sharp';
+import multer from 'multer';
 import {
   factoryDeleteOne,
   factoryGetAll,
   factoryUpdateOne,
   factoryGetOneById,
 } from '../utils/factories';
-import sharp from 'sharp';
-import multer from 'multer';
 
 // // this is for handling images without sharp image processing.
 // const multerStorage = multer.diskStorage({
@@ -27,11 +24,15 @@ import multer from 'multer';
 
 // keep in memory for sharp image processing.
 const multerStorage = multer.memoryStorage();
+// only images allowed.
 const multerFilter = (
   req: Request,
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
+  console.log('multer req', req);
+  console.log('multer file', file);
+
   if (file.mimetype.startsWith('image')) {
     cb(null, true);
   } else {
@@ -49,16 +50,21 @@ export const uploadSinglePhoto = upload.single('photo');
 export const sanitizeUserInput = catchAsync(
   400,
   async (req: Request, res: Response, next: NextFunction) => {
-    type DataType = {
-      name?: string;
-      email?: string;
-      photo?: string;
-    };
-    const { name, email } = req.body;
-    const data: DataType = {};
-    if (name) data.name = name;
-    if (email) data.email = email;
-    req.body = data;
+    // type DataType = {
+    //   name?: string;
+    //   email?: string;
+    //   photo?: string;
+    // };
+    // console.log('sanitizeInput body before', req.body);
+    // // console.log('sanitizeInput formData before', req.formData);
+    // console.log('sanitizeInput file before', req.file?.buffer);
+    // const { name, email, photo } = req.body;
+    // const data: DataType = {};
+    // if (name) data.name = name;
+    // if (email) data.email = email;
+    // if (photo) data.photo = photo;
+    // req.body = data;
+
     next();
   }
 );
@@ -70,6 +76,7 @@ export const resizePhoto = catchAsync(
     if (!req.file) return next();
     // console.log('fileObj', req.file);
     const filename = `user-${req.user.id}-${Date.now()}.jpeg`;
+    // filename is missing from req because file is kept in memory, so add 'filename' to req for the 'updateMe' fn.
     req.file.filename = filename;
     sharp(req.file?.buffer)
       .resize(100, 100)

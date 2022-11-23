@@ -41,7 +41,7 @@ router.use(protect);
 router
   .route('/me')
   .get(getMe)
-  .patch(sanitizeUserInput, uploadSinglePhoto, resizePhoto, updateMe)
+  .patch(uploadSinglePhoto, resizePhoto, updateMe)
   .delete(onlyMe, deleteUser);
 
 // all routes below this must be an 'admin'.

@@ -1,14 +1,15 @@
 const updateSettings = async (data, type) => {
   // type is either data or password
+  console.log('updateSettings data', data);
   try {
     const res = await fetch(
-      `http://localhost:8080/api/v1/users/${
+      `http://172.22.115.74:8080/api/v1/users/${
         type === 'data' ? 'me' : 'updatePassword'
       }`,
       {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
+          // 'Content-Type': 'multipart/form-data',
         },
         body: JSON.stringify(data),
       }
@@ -26,10 +27,16 @@ const saveSettingsBtn = document.getElementById('saveSettings');
 if (saveSettingsBtn) {
   saveSettingsBtn.addEventListener('click', async (e) => {
     e.preventDefault();
-    const name = document.getElementById('name').value;
-    const email = document.getElementById('email').value;
-    const res = await updateSettings({ name, email });
-    console.log(res);
+    // because multer expects multipart form data.
+    const form = new FormData();
+    form.append('name', document.getElementById('name').value);
+    form.append('email', document.getElementById('email').value);
+    form.append('photo', document.getElementById('photo').files[0]);
+
+    // const name = document.getElementById('name').value;
+    // const email = document.getElementById('email').value;
+    const res = await updateSettings(form, 'data');
+    console.log('Save Settings Results', res);
     // window.location.reload();
   });
 }
@@ -42,7 +49,7 @@ if (savePasswordBtn) {
 
     const password = document.getElementById('password-current').value;
     const newPassword = document.getElementById('password').value;
-    const res = await updateSettings({ password, newPassword });
+    const res = await updateSettings({ password, newPassword }, 'password');
     console.log(res);
   });
 }
