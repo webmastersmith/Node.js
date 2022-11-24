@@ -8,7 +8,7 @@ import { Request, Response, NextFunction } from 'express';
 import catchAsync from '../utils/catchAsyncError';
 import 'dotenv/config';
 import { createEncryptedToken, isValidToken } from '../utils/JWT';
-import sendEmail from '../utils/email';
+import Email from '../utils/email';
 import ExpressError from '../utils/Error_Handling';
 import { Document, Types } from 'mongoose';
 
@@ -47,17 +47,20 @@ export const signup = catchAsync(
     });
 
     const token = await createEncryptedToken(user, '2h');
-    if (token) {
-      await createCookie(token, res);
-      res.status(201).json({
-        status: 'success',
-        token,
-        results: await User.count(),
-        data: { user },
-      });
-    } else {
-      return next(new ExpressError(400, 'Invalid User Creation.'));
-    }
+    if (!token) return next(new ExpressError(400, 'Invalid User Creation.'));
+
+    await createCookie(token, res);
+    await new Email(
+      { name, email },
+      `${req.protocol}://${req.get('host')}/me`
+    ).sendWelcome();
+
+    res.status(201).json({
+      status: 'success',
+      token,
+      results: await User.count(),
+      data: { user },
+    });
   }
 );
 
@@ -203,12 +206,12 @@ export const forgotPassword = catchAsync(
     )}/api/v1/users/resetPassword/${resetToken}`;
     const message = `Forget your password? Click this link to reset it.\n${resetUrl}`;
     // send email
+
     try {
-      await sendEmail({
-        email: user.email,
-        subject: 'Your password reset token is valid for 10 minutes.',
-        message,
-      });
+      await new Email(
+        { email: user.email, name: user.name },
+        resetUrl
+      ).sendPasswordReset();
 
       // 4. return success response.
       res.status(201).json({
@@ -237,6 +240,7 @@ export const resetPassword = catchAsync(
   400,
   async (req: Request, res: Response, next: NextFunction) => {
     const resetTokenPlusSalt = req.params?.token;
+
     if (!resetTokenPlusSalt)
       return next(
         new ExpressError(

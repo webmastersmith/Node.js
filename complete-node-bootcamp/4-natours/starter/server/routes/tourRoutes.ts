@@ -11,6 +11,8 @@ import {
   sanitizeTourInput,
   getTourWithIn,
   getDistance,
+  uploadTourImages,
+  resizeTourImages,
 } from '../controllers/tourController';
 import { protect, approvedRoles } from '../controllers/authController';
 import reviewRouter from './reviewRoutes';
@@ -29,6 +31,20 @@ router
 router.route('/within/:distance/center/:latlng/unit/:unit').get(getTourWithIn);
 router.route('/distance/:latlng/unit/:unit').get(getDistance);
 
+// router.param('id', checkId);
+router
+  .route('/:id')
+  .get(getTourById)
+  .patch(
+    protect,
+    approvedRoles('admin', 'lead-guide'),
+    uploadTourImages,
+    resizeTourImages,
+    sanitizeTourInput,
+    updateTour
+  )
+  .delete(protect, approvedRoles('admin', 'lead-guide'), deleteTour);
+
 router
   .route('/')
   .get(getAllTours)
@@ -38,17 +54,4 @@ router
     sanitizeTourInput,
     createTour
   );
-
-// router.param('id', checkId);
-router
-  .route('/:id')
-  .get(getTourById)
-  .patch(
-    protect,
-    approvedRoles('admin', 'lead-guide'),
-    sanitizeTourInput,
-    updateTour
-  )
-  .delete(protect, approvedRoles('admin', 'lead-guide'), deleteTour);
-
 export default router;

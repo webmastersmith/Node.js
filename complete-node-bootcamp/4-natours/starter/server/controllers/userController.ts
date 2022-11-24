@@ -10,6 +10,7 @@ import {
   factoryUpdateOne,
   factoryGetOneById,
 } from '../utils/factories';
+import fs from 'fs';
 
 // // this is for handling images without sharp image processing.
 // const multerStorage = multer.diskStorage({
@@ -30,8 +31,7 @@ const multerFilter = (
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
-  console.log('multer req', req);
-  console.log('multer file', file);
+  // console.log('multer req', req);
 
   if (file.mimetype.startsWith('image')) {
     cb(null, true);
@@ -50,20 +50,17 @@ export const uploadSinglePhoto = upload.single('photo');
 export const sanitizeUserInput = catchAsync(
   400,
   async (req: Request, res: Response, next: NextFunction) => {
-    // type DataType = {
-    //   name?: string;
-    //   email?: string;
-    //   photo?: string;
-    // };
-    // console.log('sanitizeInput body before', req.body);
-    // // console.log('sanitizeInput formData before', req.formData);
+    type DataType = {
+      name?: string;
+      email?: string;
+    };
+    console.log('sanitizeInput req.body', req.body);
     // console.log('sanitizeInput file before', req.file?.buffer);
-    // const { name, email, photo } = req.body;
-    // const data: DataType = {};
-    // if (name) data.name = name;
-    // if (email) data.email = email;
-    // if (photo) data.photo = photo;
-    // req.body = data;
+    const { name, email } = req.body;
+    const data: DataType = Object.create(null);
+    if (name) data.name = name;
+    if (email) data.email = email;
+    req.body = data;
 
     next();
   }
@@ -73,12 +70,12 @@ export const sanitizeUserInput = catchAsync(
 export const resizePhoto = catchAsync(
   400,
   async (req: Request, res: Response, next: NextFunction) => {
+    // req.file is added by multer if photo is passed in 'multipart form data'.
     if (!req.file) return next();
-    // console.log('fileObj', req.file);
     const filename = `user-${req.user.id}-${Date.now()}.jpeg`;
     // filename is missing from req because file is kept in memory, so add 'filename' to req for the 'updateMe' fn.
     req.file.filename = filename;
-    sharp(req.file?.buffer)
+    await sharp(req.file?.buffer)
       .resize(100, 100)
       .toFormat('jpeg')
       .jpeg({ quality: 90 })
@@ -89,10 +86,13 @@ export const resizePhoto = catchAsync(
 );
 
 export const updateMe = catchAsync(400, async (req, res, next) => {
+  // user is added to req from 'protect' fn.
   const { user } = req;
-  // console.log({ body: req.body, photo: req.file });
+  // multer adds the body object from multipart form data. body properties will not exist until multer processes multipart-form data.
+  // the photo has been written to disk and the filename is all that is needed.
   if (req.file) req.body.photo = req.file?.filename;
 
+  console.log('updateMe req.body', req.body);
   // input has been sanitized.
   const userQuery = await User.findByIdAndUpdate(user.id, req.body, {
     returnDocument: 'after',
@@ -100,11 +100,19 @@ export const updateMe = catchAsync(400, async (req, res, next) => {
   if (!userQuery)
     next(new ExpressError(403, 'Please login to get your profile'));
   const { name, email } = userQuery as UserType;
+  // all is well delete old photo
+  if (req.body.photo)
+    fs.unlink(`${process.cwd()}/public/img/users/${user.photo}`, (err) => {
+      if (err) throw err;
+      console.log('Deleted image ' + user.photo);
+    });
   res.status(200).json({
     status: 'success',
     data: { name, email },
   });
 });
+
+// get user
 export const getMe = catchAsync(400, async (req, res, next) => {
   const { user } = req;
   if (!user) next(new ExpressError(403, 'Please login to get your profile'));

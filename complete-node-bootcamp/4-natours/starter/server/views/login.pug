@@ -13,7 +13,7 @@ block content
           input#email.form__input(
             type="email",
             placeholder="you@example.com",
-            required
+            required,
             value="admin@natours.io"
           )
             //- value="loulou@example.com"
@@ -23,10 +23,8 @@ block content
             type="password",
             placeholder="••••••••",
             required,
-            minlength="4"
+            minlength="4",
             value="1234"
           )
         .form__group
-          button.btn.btn--green(
-            value="submit"
-          ) Login
+          button.btn.btn--green(value="submit") Login

@@ -3,15 +3,13 @@ const updateSettings = async (data, type) => {
   console.log('updateSettings data', data);
   try {
     const res = await fetch(
-      `http://172.22.115.74:8080/api/v1/users/${
+      `http://172.22.127.10:8080/api/v1/users/${
         type === 'data' ? 'me' : 'updatePassword'
       }`,
       {
         method: 'PATCH',
-        headers: {
-          // 'Content-Type': 'multipart/form-data',
-        },
-        body: JSON.stringify(data),
+        headers: type === 'data' ? {} : { 'Content-Type': 'application/json' },
+        body: type === 'data' ? data : JSON.stringify(data),
       }
     );
     // window.location.assign('/');
@@ -36,8 +34,8 @@ if (saveSettingsBtn) {
     // const name = document.getElementById('name').value;
     // const email = document.getElementById('email').value;
     const res = await updateSettings(form, 'data');
-    console.log('Save Settings Results', res);
-    // window.location.reload();
+    // console.log('Save Settings Results', res);
+    if (res) window.location.reload();
   });
 }
 

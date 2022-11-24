@@ -9,6 +9,77 @@ import {
   factoryCreateOne,
   factoryGetOneById,
 } from '../utils/factories';
+import multer from 'multer';
+import sharp from 'sharp';
+
+// keep in memory for sharp image processing.
+const multerStorage = multer.memoryStorage();
+// only images allowed.
+const multerFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
+  // console.log('multer req', req);
+
+  if (file.mimetype.startsWith('image')) {
+    cb(null, true);
+  } else {
+    cb(new Error('You can only upload images.'));
+  }
+};
+
+const upload = multer({
+  storage: multerStorage,
+  fileFilter: multerFilter,
+});
+// this is multer middleware. It parses multipart form data.
+// returns an object with 'name' as key and array as value.
+export const uploadTourImages = upload.fields([
+  { name: 'imageCover', maxCount: 1 }, // only process an array of 1 image.
+  { name: 'images', maxCount: 3 }, // only process an array of 3 images
+]);
+
+type ImageType = {
+  imageCover?: Express.Multer.File[];
+  images?: Express.Multer.File[];
+};
+interface MulterRequest extends Request {
+  files: ImageType;
+}
+export const resizeTourImages = catchAsync(404, async (req, res, next) => {
+  console.log('tourBody', req.body);
+  console.log('tourImages', req.files);
+  const files = (req as MulterRequest).files;
+
+  if (!files?.imageCover || !files?.images) return next();
+  const { imageCover, images } = files;
+  // imageCover
+  const imageCoverFilename = `tour-${req.params.id}-${Date.now()}-cover.jpeg`;
+  await sharp(imageCover[0].buffer)
+    .resize(2000, 1333)
+    .toFormat('jpeg')
+    .jpeg({ quality: 90 })
+    .toFile(`public/img/tours/${imageCoverFilename}`);
+  req.body.imageCover = imageCoverFilename;
+
+  // images
+  req.body.images = await Promise.all(
+    images.map((image, i) => {
+      const imageName: string = `tour-${req.params.id}-${Date.now()}-${
+        i + 1
+      }.jpeg`;
+      sharp(image.buffer)
+        .resize(2000, 1333)
+        .toFormat('jpeg')
+        .jpeg({ quality: 90 })
+        .toFile(`public/img/tours/${imageName}`);
+      return imageName;
+    })
+  );
+
+  next();
+});
 
 // aliasTopTours manipulate the req.query url to include logic for top 5 tours.
 export const aliasTopTours = async (
@@ -101,7 +172,7 @@ export const sanitizeTourInput = catchAsync(404, async (req, res, next) => {
     guides,
   } = req.body as TourType;
 
-  const data = {} as TourType;
+  const data = Object.create(null) as TourType;
 
   if (name) data.name = name;
   if (duration) data.duration = duration;

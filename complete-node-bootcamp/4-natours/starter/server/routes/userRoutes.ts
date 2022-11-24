@@ -41,19 +41,19 @@ router.use(protect);
 router
   .route('/me')
   .get(getMe)
-  .patch(uploadSinglePhoto, resizePhoto, updateMe)
+  .patch(uploadSinglePhoto, resizePhoto, sanitizeUserInput, updateMe)
   .delete(onlyMe, deleteUser);
 
 // all routes below this must be an 'admin'.
 router.use(approvedRoles('admin'));
-// get all Users -admin only
-router.route('/').get(getAllUsers);
-
 // updateUser Info
 router
   .route('/:id')
   .get(getUserById)
   .patch(sanitizeUserInput, updateUser)
   .delete(deleteUser);
+
+// get all Users -admin only
+router.route('/').get(getAllUsers);
 
 export default router;
