@@ -25,7 +25,7 @@ export const createCookie = async (token: string, res: Response) => {
     expires: new Date(Date.now() + 2 * 60 * 60 * 1000),
     httpOnly: true,
   };
-  if (process.env.NODE_ENV === 'production') cookieObject.secure = true;
+  // if (process.env.NODE_ENV === 'production') cookieObject.secure = true;
 
   res.cookie('jwt', token, cookieObject);
   return;
@@ -120,7 +120,8 @@ export const protect = catchAsync(400, async (req, res, next) => {
   }
 
   // 2. isTokenValid
-  if (!token) return next(new ExpressError(400, 'Token Invalid'));
+  if (!token)
+    return next(new ExpressError(400, 'Token Invalid. Please login again.'));
   // 3. does user exist?
   if (Array.isArray(token))
     return next(new ExpressError(400, 'Token is Array'));
@@ -144,7 +145,7 @@ export const protect = catchAsync(400, async (req, res, next) => {
   return next();
 });
 
-// Only for rendered pages. No Errors.
+// Only for rendered pages. No Errors. Add user to pug locals.
 export const isLoggedIn = catchAsync(400, async (req, res, next) => {
   // console.log('reqBody', req.body);
   // 1. Get token

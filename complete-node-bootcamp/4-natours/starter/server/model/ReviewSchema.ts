@@ -46,8 +46,7 @@ const reviewSchema = new Schema<ReviewType, ReviewModel, ReviewTypeMethods>(
     },
     createdAt: {
       type: Date,
-      // prettier-ignore
-      default: new Date,
+      default: () => new Date(),
     },
     tour: {
       type: Schema.Types.ObjectId,

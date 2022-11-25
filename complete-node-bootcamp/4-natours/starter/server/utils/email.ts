@@ -27,7 +27,14 @@ export default class Email {
   newTransport() {
     if (process.env.NODE_ENV === 'production') {
       // use sendgrid
-      return 1;
+      console.log('sendgrid email transport used.');
+      return nodemailer.createTransport({
+        service: 'SendGrid',
+        auth: {
+          user: process.env.SENDGRID_USER,
+          pass: process.env.SENDGRID_KEY,
+        },
+      });
     }
 
     return nodemailer.createTransport({

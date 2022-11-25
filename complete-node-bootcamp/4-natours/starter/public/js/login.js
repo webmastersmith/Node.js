@@ -1,6 +1,6 @@
 const login = async (email, password) => {
   try {
-    const res = await fetch('http://172.22.127.10:8080/api/v1/users/login', {
+    const res = await fetch('http://172.22.125.59:8080/api/v1/users/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

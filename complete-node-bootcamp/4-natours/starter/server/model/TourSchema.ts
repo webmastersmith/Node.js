@@ -130,8 +130,7 @@ const tourSchema = new Schema<TourType>(
     },
     createdAt: {
       type: Date,
-      // prettier-ignore
-      default: Date.now,
+      default: () => Date.now(),
     },
     startDates: {
       type: [Date],

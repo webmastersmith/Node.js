@@ -5,6 +5,7 @@ import tourRouter from './routes/tourRoutes';
 import userRouter from './routes/userRoutes';
 import reviewRouter from './routes/reviewRoutes';
 import viewRouter from './routes/viewRoutes';
+import bookingRouter from './routes/bookingRoutes';
 import ExpressError from './utils/Error_Handling';
 import MainErrorHandler from './controllers/errorController';
 import { rateLimit } from 'express-rate-limit';
@@ -67,6 +68,8 @@ app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 // reviews
 app.use('/api/v1/reviews', reviewRouter);
+// book tours
+app.use('/api/v1/bookings', bookingRouter);
 // Natours Website - must come last to avoid naming problems.
 app.use('/', viewRouter);
 

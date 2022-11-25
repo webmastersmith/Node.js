@@ -3,7 +3,7 @@ const updateSettings = async (data, type) => {
   console.log('updateSettings data', data);
   try {
     const res = await fetch(
-      `http://172.22.127.10:8080/api/v1/users/${
+      `http://172.22.125.59:8080/api/v1/users/${
         type === 'data' ? 'me' : 'updatePassword'
       }`,
       {
