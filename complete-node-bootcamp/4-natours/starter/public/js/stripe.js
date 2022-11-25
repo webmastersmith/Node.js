@@ -6,7 +6,7 @@ const bookTour = async (tourId) => {
   try {
     // 1) get checkout session.
     const res = await fetch(
-      `http://172.22.125.59:8080/api/v1/bookings/checkout-session/${tourId}`
+      `http://172.22.126.209:8080/api/v1/bookings/checkout-session/${tourId}`
     );
     if (res.status === 200) {
       const data = await res.json();

@@ -5,6 +5,13 @@ import ExpressError from '../utils/Error_Handling';
 import { Tour } from '../model/TourSchema';
 import Stripe from 'stripe';
 import { Booking } from '../model/BookingSchema';
+import {
+  factoryDeleteOne,
+  factoryGetAll,
+  factoryUpdateOne,
+  factoryCreateOne,
+  factoryGetOneById,
+} from '../utils/factories';
 
 export const checkoutSession = catchAsync(404, async (req, res, next) => {
   const { tourId } = req.params;
@@ -64,3 +71,10 @@ export const createBookingCheckout = catchAsync(404, async (req, res, next) => {
 
   return res.redirect(`${req.originalUrl.split('?')[0]}`);
 });
+
+// CRUD routes
+export const getAllBookings = factoryGetAll(Booking);
+export const updateBooking = factoryUpdateOne(Booking); // sanitize input
+export const createBooking = factoryCreateOne(Booking); // sanitize input
+export const deleteBooking = factoryDeleteOne(Booking);
+export const getBookingById = factoryGetOneById(Booking);
